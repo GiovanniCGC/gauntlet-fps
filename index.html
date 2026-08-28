@@ -63,10 +63,21 @@
           </div>
         </div>
 
+        <div id="minimap-wrap">
+          <canvas id="minimap" width="132" height="132"></canvas>
+          <span class="minimap-label">TACTICAL GRID // 43N</span>
+          <div class="minimap-north">N</div>
+        </div>
+        <div id="killfeed"></div>
+
         <!-- Bottom HUD -->
         <div id="hud-bottom">
           <div id="hud-bottom-left">
-            <div id="stamina-indicator" class="hidden"></div>
+            <div id="objective-tracker">
+              <div class="obj-track-head">OBJ // ELIMINATE</div>
+              <div class="obj-track-row"><span>HOSTILES</span><b id="obj-hostiles">5/5</b></div>
+              <div class="obj-track-row"><span>SECTOR</span><b id="obj-sector">A-01</b></div>
+            </div>
           </div>
 
           <div id="hud-center">

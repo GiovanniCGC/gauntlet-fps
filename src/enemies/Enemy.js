@@ -114,14 +114,27 @@ export class Enemy {
         if (canSee) {
           this.lastSeenPos = playerEye.clone();
           this.lastSeenTime = this.game.time;
-          this._facePoint(playerEye, dt, 4.5);
-          // attack if in range and line of sight
-          if (dist < CONFIG.enemies.attackRange && this.stateTime > 0.25) {
+          this._alertSquad();
+          this._facePoint(playerEye, dt, 5.2);
+          // suppressive cover: if taken damage recently or low health, seek cover
+          const lowHealth = this.health < this.maxHealth * 0.45;
+          const underFire = this._hitFlash > 0.05;
+          if ((lowHealth || underFire) && this.stateTime % 3 < 0.08) {
+            const cover=this._findCover(playerEye);
+            if(cover) this._moveToward(cover, dt, CONFIG.enemies.chaseSpeed*0.9);
+          }
+          // flank if teammate near
+          const flank = Math.random() < 0.012;
+          if (flank) {
+            const tangent = new THREE.Vector3().crossVectors(toPlayer, new THREE.Vector3(0,1,0)).normalize().multiplyScalar((Math.random()<0.5?1:-1)*3.5);
+            const flankPos = this.position.clone().add(tangent);
+            this._moveToward(flankPos, dt, CONFIG.enemies.chaseSpeed*0.75);
+          }
+          if (dist < CONFIG.enemies.attackRange && this.stateTime > 0.22) {
             if (this.shootCooldown <= 0) this._shootAt(playerEye);
           }
-          // move towards player if far
-          if (dist > 9) this._moveToward(this.lastSeenPos, dt, CONFIG.enemies.chaseSpeed);
-          else if (dist < 5) this._moveAway(playerEye, dt);
+          if (dist > 10) this._moveToward(this.lastSeenPos, dt, CONFIG.enemies.chaseSpeed);
+          else if (dist < 5.5) this._moveAway(playerEye, dt);
           else this._strafe(dt);
         } else {
           if (this.game.time - this.lastSeenTime > 1.0) {
@@ -245,11 +258,44 @@ export class Enemy {
     this.yaw += diff * Utils.clamp(dt * speed, 0, 1);
   }
 
+  // 100x: squad alert, cover, flank
+  _alertSquad() {
+    for(const e of this.game.enemies?.list || []){
+      if(e===this || e.isDead) continue;
+      if(e.position.distanceTo(this.position) < 18){
+        if(e.state==='patrol' || e.state==='search'){
+          e.state='alert'; e.stateTime=0; e.lastSeenPos=this.lastSeenPos?.clone();
+        }
+      }
+    }
+  }
+  _findCover(fromPos){
+    // find nearest world box that blocks LOS to player
+    const colliders=this.game.world?.getColliders()||[];
+    let best=null; let bestScore=-Infinity;
+    for(const box of colliders){
+      if(box.max.y < 0.8) continue; // low cover still usable
+      const center=new THREE.Vector3(); box.getCenter(center);
+      if(center.distanceTo(this.position) > 14) continue;
+      // score: distance to enemy (closer better), and blocks LOS
+      const toPlayer=center.clone().sub(this.game.player.getEyePosition()).length();
+      // check if box is between enemy and player
+      const mid=center.clone().add(new THREE.Vector3(0,0.8,0));
+      const eye=this._getEye();
+      const toMid=mid.clone().sub(eye).normalize();
+      const hit=this.game.world?.raycast(eye, toMid, eye.distanceTo(mid)+2);
+      const blocks = hit ? 1 : 0;
+      const score = blocks*10 - center.distanceTo(this.position)*0.5 + Math.random()*2;
+      if(score>bestScore){ bestScore=score; best=center.clone(); best.y=0; }
+    }
+    return best;
+  }
+
   _shootAt(targetPos) {
     if (this.ammo <= 0) {
-      if (this.reloadTime <= 0) this.reloadTime = 1.6;
+      if (this.reloadTime <= 0) this.reloadTime = 1.8;
       this.reloadTime -= 0.016;
-      if (this.reloadTime <= 0) { this.ammo = 12; this.reloadTime = 0; }
+      if (this.reloadTime <= 0) { this.ammo = 14; this.reloadTime = 0; this.game.audio?.play('reload', this.position); }
       return;
     }
     const eye = this._getEye();

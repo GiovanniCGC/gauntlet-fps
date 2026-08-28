@@ -39,35 +39,59 @@ export class WeaponManager {
   }
 
   _createWeaponMesh() {
-    // simple weapon representation: a box for body + barrel
-    const bodyGeo = new THREE.BoxGeometry(0.08, 0.06, 0.35);
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1e2328, roughness: 0.6, metalness: 0.3 });
+    // Detailed viewmodel - 100x: mag, stock, bolt, sight with proper alignment for ADS
     const mesh = new THREE.Group();
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.set(0, -0.08, -0.22);
-    body.castShadow = true;
-    mesh.add(body);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1b2127, roughness: 0.58, metalness: 0.28 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x0d1216, roughness: 0.62, metalness: 0.22 });
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x1a1e23, roughness: 0.42, metalness: 0.58 });
+    // receiver
+    const recGeo = new THREE.BoxGeometry(0.072, 0.058, 0.30);
+    const rec = new THREE.Mesh(recGeo, bodyMat);
+    rec.position.set(0, -0.078, -0.20); rec.castShadow = true; mesh.add(rec);
+    // handguard
+    const hgGeo = new THREE.BoxGeometry(0.056, 0.038, 0.18);
+    const hg = new THREE.Mesh(hgGeo, darkMat);
+    hg.position.set(0, -0.072, -0.36); mesh.add(hg);
     // barrel
-    const barrelGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.28, 8);
+    const barrelGeo = new THREE.CylinderGeometry(0.011, 0.011, 0.30, 10);
     barrelGeo.rotateX(Math.PI / 2);
-    const barrelMat = new THREE.MeshStandardMaterial({ color: 0x111417, roughness: 0.5 });
-    const barrel = new THREE.Mesh(barrelGeo, barrelMat);
-    barrel.position.set(0, -0.07, -0.42);
-    mesh.add(barrel);
-    // sight
-    const sightGeo = new THREE.BoxGeometry(0.02, 0.02, 0.05);
-    const sightMat = new THREE.MeshStandardMaterial({ color: 0x2a2e33 });
-    const sight = new THREE.Mesh(sightGeo, sightMat);
-    sight.position.set(0, -0.045, -0.22);
-    mesh.add(sight);
-    // muzzle flash light placeholder
-    const flashGeo = new THREE.ConeGeometry(0.04, 0.09, 6);
+    const barrel = new THREE.Mesh(barrelGeo, metalMat);
+    barrel.position.set(0, -0.068, -0.44); mesh.add(barrel);
+    // flash hider
+    const fhGeo = new THREE.CylinderGeometry(0.016, 0.013, 0.045, 8);
+    fhGeo.rotateX(Math.PI / 2);
+    const fh = new THREE.Mesh(fhGeo, metalMat);
+    fh.position.set(0, -0.068, -0.60); mesh.add(fh);
+    // stock
+    const stockGeo = new THREE.BoxGeometry(0.052, 0.08, 0.16);
+    const stock = new THREE.Mesh(stockGeo, darkMat);
+    stock.position.set(0, -0.065, -0.02); mesh.add(stock);
+    // mag (removable visual)
+    const magGeo = new THREE.BoxGeometry(0.038, 0.11, 0.068);
+    const magMat = new THREE.MeshStandardMaterial({ color: 0x0f1419, roughness: 0.85 });
+    this.magMesh = new THREE.Mesh(magGeo, magMat);
+    this.magMesh.position.set(0, -0.14, -0.18); mesh.add(this.magMesh);
+    // charging handle
+    const chGeo = new THREE.BoxGeometry(0.025, 0.012, 0.04);
+    const ch = new THREE.Mesh(chGeo, metalMat);
+    ch.position.set(0.02, -0.048, -0.12); mesh.add(ch);
+    // micro sight - proper ADS alignment (centered to eye)
+    const sightBase = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.015, 0.09), darkMat);
+    sightBase.position.set(0, -0.042, -0.21); mesh.add(sightBase);
+    const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.035, 12), new THREE.MeshStandardMaterial({ color: 0x2a5a7a, roughness:0.2, metalness:0.6, transparent:true, opacity:0.85 }));
+    lens.rotation.x=Math.PI/2; lens.position.set(0, -0.032, -0.21); mesh.add(lens);
+    // laser/flash unit
+    const flashGeo = new THREE.ConeGeometry(0.042, 0.095, 8);
     flashGeo.rotateX(Math.PI / 2);
-    const flashMat = new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0 });
+    const flashMat = new THREE.MeshBasicMaterial({ color: 0xffe07a, transparent: true, opacity: 0 });
     const flash = new THREE.Mesh(flashGeo, flashMat);
-    flash.position.set(0, -0.07, -0.58);
+    flash.position.set(0, -0.068, -0.62);
     flash.name = 'muzzleFlash';
     mesh.add(flash);
+    // point light for muzzle (no shadow)
+    this.muzzleLight = new THREE.PointLight(0xffcc66, 0, 3.2, 2);
+    this.muzzleLight.position.set(0, -0.068, -0.62);
+    mesh.add(this.muzzleLight);
 
     mesh.position.set(0.28, -0.22, -0.38);
     this.weaponGroup.add(mesh);
@@ -223,8 +247,21 @@ export class WeaponManager {
     // ballistics
     this._doBallistics();
 
-    // ejection etc hooks
+    // ejection - physical brass with world pool
+    try {
+      const muzzlePos = this.getMuzzlePos();
+      const ejectPos = this.game.player.getEyePosition().clone().addScaledVector(this.game.player.getForward(), 0.12);
+      ejectPos.y -= 0.12;
+      this.game.world?.spawnShell(ejectPos, this.game.player.getForward());
+      // also spawn a few spark particles via impact? handled in world
+    } catch(e) {}
     this.game.audio?.play('shell', this.game.player.position);
+
+    // muzzle light flash
+    if (this.muzzleLight) {
+      this.muzzleLight.intensity = 2.8;
+      setTimeout(()=>{ if(this.muzzleLight) this.muzzleLight.intensity=0; }, 45);
+    }
 
     this.updateHUD();
 

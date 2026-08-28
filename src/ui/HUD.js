@@ -20,6 +20,11 @@ export class HUD {
     this.elPauseKills = document.getElementById('pause-kills');
     this.elPauseTime = document.getElementById('pause-time');
     this.elPauseHp = document.getElementById('pause-hp');
+    this.elMinimap = document.getElementById('minimap');
+    this.elKillfeed = document.getElementById('killfeed');
+    this.elObjHostiles = document.getElementById('obj-hostiles');
+    this.elObjSector = document.getElementById('obj-sector');
+    this.minimapCtx = this.elMinimap?.getContext('2d') || null;
     this.indicators = {
       crouch: document.getElementById('indicator-crouch'),
       sprint: document.getElementById('indicator-sprint'),
@@ -28,6 +33,7 @@ export class HUD {
     };
     this._hitmarkerTimer = 0;
     this._damageFlash = 0;
+    this._killQueue = [];
   }
 
   show() {}
@@ -83,7 +89,86 @@ export class HUD {
       this.elVignette.classList.add('active');
       setTimeout(()=> this.elVignette?.classList.remove('active'), 420);
     }
-    // subtle screen shake via HUD could be added
+    // directional hit arrow
+    if (fromPos && this.game.player) {
+      const p = this.game.player.position;
+      const dir = fromPos.clone().sub(p); dir.y=0;
+      const angle = Math.atan2(dir.x, -dir.z) - this.game.player.yaw;
+      this._showHitDir(angle);
+    }
+  }
+  _showHitDir(angle){
+    const wrap=document.getElementById('hud');
+    if(!wrap) return;
+    const el=document.createElement('div'); el.className='hit-dir';
+    const arrow=document.createElement('div'); arrow.className='hit-arrow';
+    el.appendChild(arrow);
+    el.style.left='50%'; el.style.top='50%';
+    // place on circle radius 92px
+    const r=92;
+    el.style.transform=`translate(-50%,-50%) rotate(${angle}rad) translateY(-${r}px)`;
+    wrap.appendChild(el);
+    setTimeout(()=> el.remove(), 900);
+  }
+  addKill(text){
+    if(!this.elKillfeed) return;
+    const item=document.createElement('div'); item.className='kill-item';
+    item.innerHTML=text;
+    this.elKillfeed.appendChild(item);
+    setTimeout(()=> { item.style.opacity='0'; item.style.transform='translateX(8px)'; setTimeout(()=>item.remove(),300); }, 3400);
+    // also update objective
+    this.updateObjective();
+  }
+  updateObjective(){
+    if(this.elObjHostiles){
+      const alive=(this.game.enemies?.list||[]).filter(e=>!e.isDead).length;
+      const total=(this.game.enemies?.list||[]).length || 5;
+      this.elObjHostiles.textContent=`${total-alive}/${total}`;
+      this.elObjHostiles.style.color = alive===0 ? 'var(--ok)' : 'var(--text)';
+    }
+    if(this.elObjSector && this.game.player){
+      const x=this.game.player.position.x, z=this.game.player.position.z;
+      let sector='A-01';
+      if(z < -12) sector = z < -26 ? 'C-03' : 'B-02';
+      this.elObjSector.textContent=sector;
+    }
+  }
+
+  _drawMinimap(){
+    if(!this.minimapCtx || !this.game.player || !this.game.world) return;
+    const ctx=this.minimapCtx; const s=132; const range=36;
+    ctx.clearRect(0,0,s,s);
+    // bg
+    ctx.fillStyle='#080d12'; ctx.fillRect(0,0,s,s);
+    // grid
+    ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=1;
+    for(let i=0;i<s;i+=16){ ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,s); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(s,i); ctx.stroke(); }
+    const px=this.game.player.position.x, pz=this.game.player.position.z;
+    const yaw=this.game.player.yaw;
+    const toMinimap=(x,z)=> ({ x: s/2 + (x - px)/range * s*0.45, y: s/2 + (z - pz)/range * s*0.45 });
+    // world boxes as minimap
+    ctx.fillStyle='rgba(90,108,128,0.55)';
+    for(const b of this.game.world.getColliders()){
+      if(b.max.y < 0.5) continue;
+      if(b.max.x - b.min.x > 50) continue; // skip perimeter huge
+      const a=toMinimap(b.min.x, b.min.z), c=toMinimap(b.max.x, b.max.z);
+      const w=c.x - a.x, h=c.y - a.y;
+      if(w<1||h<1) continue;
+      if(Math.abs(a.x - s/2) > s*0.7 || Math.abs(a.y - s/2) > s*0.7) continue;
+      ctx.fillRect(a.x, a.y, w, h);
+    }
+    // enemies
+    for(const e of this.game.enemies?.list||[]){
+      const p=toMinimap(e.position.x, e.position.z);
+      ctx.fillStyle= e.isDead ? 'rgba(120,120,120,0.7)' : (e.state==='pursuit'?'#e63946':'#e6a23c');
+      ctx.beginPath(); ctx.arc(p.x, p.y, e.isDead?2.2:3.2,0,Math.PI*2); ctx.fill();
+      if(!e.isDead){ ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(p.x + Math.sin(e.yaw)*4, p.y + Math.cos(e.yaw)*4, 1.2,0,Math.PI*2); ctx.fill(); }
+    }
+    // player
+    ctx.fillStyle='#2dd4a8'; ctx.beginPath(); ctx.arc(s/2, s/2, 3.8,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(45,212,168,0.9)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(s/2, s/2); ctx.lineTo(s/2 + Math.sin(yaw)*10, s/2 + Math.cos(yaw)*-10); ctx.stroke();
+    // north
+    ctx.fillStyle='rgba(255,204,51,0.95)'; ctx.font='8px JetBrains Mono'; ctx.fillText('N', s/2-4, 10);
   }
 
   update(dt) {
@@ -126,6 +211,9 @@ export class HUD {
     }
     // reload bar progress
     if (weapons?.current?.isReloading) this.updateReload(true);
+    // minimap - tactical 100x
+    this._drawMinimap();
+    this.updateObjective();
     // pause stats
     if (this.game.state === 'paused' && player) {
       if (this.elPauseKills) this.elPauseKills.textContent = String(player.kills);

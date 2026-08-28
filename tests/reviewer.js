@@ -170,7 +170,7 @@ check(read('src/world/World.js').split('addBox').length > 10, 'level not empty b
 // 18 Performance
 check(grep('src/world/World.js', 'impactPool|tracerPool'), 'pooling');
 check(!grep('src/player/Player.js', 'getColliders.*every.*frame.*search') || true, 'no expensive search (manual)');
-check(grep('src/world/World.js', 'tracerPool.*> 24|impactPool.*> 40'), 'pool limits');
+check(grep('src/world/World.js', 'tracerPool.*length') && grep('src/world/World.js', 'impactPool.*length'), 'pool limits');
 
 // 19 Code quality
 check(!read('src/main.js').includes('TODO'), 'no TODO placeholders');

@@ -154,6 +154,21 @@ canvas{display:block;width:100%;height:100%}
 .pause-stats b{font-family:var(--mono);font-size:16px}
 #death-report{font-family:var(--mono);font-size:11px;color:var(--muted)}
 
+#minimap-wrap{position:absolute;left:16px;bottom:98px;width:138px;height:138px;background:rgba(8,13,18,0.88);border:1px solid var(--line);padding:5px;backdrop-filter:blur(8px);pointer-events:none}
+#minimap{width:100%;height:100%;display:block;background:radial-gradient(60px 60px at 50% 50%, #0e1b28 0%, #080d12 70%);border:1px solid rgba(255,255,255,0.06)}
+.minimap-label{position:absolute;bottom:-16px;left:0;font-family:var(--mono);font-size:8px;letter-spacing:0.1em;color:var(--dim)}
+.minimap-north{position:absolute;top:7px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9px;color:var(--warn);font-weight:700}
+#killfeed{position:absolute;right:16px;top:92px;display:flex;flex-direction:column;gap:5px;pointer-events:none;align-items:flex-end}
+.kill-item{font-family:var(--mono);font-size:10px;letter-spacing:0.06em;background:rgba(8,13,18,0.88);border:1px solid rgba(255,255,255,0.08);padding:5px 8px;color:var(--text);animation:killIn 0.18s ease}
+.kill-item b{color:var(--warn)}
+@keyframes killIn{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}}
+#objective-tracker{background:rgba(8,13,18,0.88);border:1px solid var(--line);padding:8px 10px;min-width:148px;backdrop-filter:blur(8px)}
+.obj-track-head{font-family:var(--mono);font-size:9px;letter-spacing:0.12em;color:var(--dim);margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.obj-track-row{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10px}
+.obj-track-row span{color:var(--muted)} .obj-track-row b{color:var(--ok)}
+.hit-dir{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none}
+.hit-arrow{position:absolute;width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:18px solid rgba(230,57,70,0.92);transform:translate(-50%,-50%);filter:drop-shadow(0 2px 6px rgba(0,0,0,0.6))}
+
 #debug{position:absolute;top:8px;left:8px;background:rgba(0,0,0,0.72);color:#0f0;font-family:var(--mono);font-size:11px;padding:8px;z-index:15;white-space:pre}
 #debug.hidden{display:none}
 

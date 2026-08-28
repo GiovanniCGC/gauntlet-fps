@@ -41,8 +41,10 @@ export class EnemyManager {
   }
 
   onEnemyHit(enemy, dmg) {
-    // hitmarker via HUD
     this.game.hud?.showHitmarker(enemy.isDead);
+    if(enemy.isDead){
+      this.game.hud?.addKill(`<b>YOU</b> → HOSTILE <b>+1</b> [${enemy.position.x.toFixed(0)},${enemy.position.z.toFixed(0)}]`);
+    }
   }
 
   raycast(origin, dir, maxDist) {
