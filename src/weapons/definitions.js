@@ -1,0 +1,62 @@
+export const WEAPONS = {
+  m4a1: {
+    id: 'm4a1',
+    name: 'M4A1',
+    type: 'rifle',
+    fireMode: 'auto', // auto | semi | burst
+    fireRate: 780, // rpm
+    magSize: 30,
+    reserve: 90,
+    reloadTime: 1.85,
+    emptyReloadTime: 2.35,
+    adsTime: 0.22,
+    adsFov: 62,
+    damage: 34,
+    headMult: 1.0, // multiplied by global
+    bodyMult: 1.0,
+    spread: { hip: 1.8, ads: 0.42, movePenalty: 1.6, crouchBonus: 0.78 },
+    recoil: { vertical: 1.45, horizontal: 0.55, verticalVar: 0.35, horizVar: 0.6, recovery: 7.2, pattern: [1, 1.1, 0.9, 1.25, 1.15, 0.85, 1.0, 0.95] },
+    movementPenalty: 0.96,
+    allowFireDuringReload: false,
+    canADS: true,
+  },
+  glock: {
+    id: 'glock',
+    name: 'G19',
+    type: 'pistol',
+    fireMode: 'semi',
+    fireRate: 420,
+    magSize: 17,
+    reserve: 51,
+    reloadTime: 1.35,
+    emptyReloadTime: 1.65,
+    adsTime: 0.16,
+    adsFov: 68,
+    damage: 26,
+    spread: { hip: 1.45, ads: 0.32, movePenalty: 1.35, crouchBonus: 0.82 },
+    recoil: { vertical: 1.15, horizontal: 0.42, verticalVar: 0.28, horizVar: 0.45, recovery: 9.0, pattern: [1, 0.95, 1.05] },
+    movementPenalty: 0.99,
+    allowFireDuringReload: false,
+    canADS: true,
+  },
+  shotgun: {
+    id: 'shotgun',
+    name: 'M1014',
+    type: 'shotgun',
+    fireMode: 'semi',
+    fireRate: 180,
+    magSize: 8,
+    reserve: 24,
+    reloadTime: 0.55, // per shell
+    emptyReloadTime: 0.55,
+    adsTime: 0.26,
+    adsFov: 60,
+    damage: 11, // per pellet
+    pellets: 8,
+    spread: { hip: 4.2, ads: 2.1, movePenalty: 1.4, crouchBonus: 0.85 },
+    recoil: { vertical: 3.2, horizontal: 1.1, verticalVar: 0.5, horizVar: 0.9, recovery: 5.5, pattern: [1] },
+    movementPenalty: 0.92,
+    allowFireDuringReload: false,
+    canADS: true,
+  }
+};
