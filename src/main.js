@@ -10,26 +10,29 @@ import { EnemyManager } from './enemies/EnemyManager.js';
 import { HUD } from './ui/HUD.js';
 import { AudioManager } from './audio/AudioManager.js';
 
-// Scene setup
+// Scene setup - cinematic
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0c141d);
+scene.background = new THREE.Color(0x080d12);
+scene.fog = new THREE.Fog(0x0b1118, 38, 72);
 
 const camera = new THREE.PerspectiveCamera(CONFIG.movement.baseFov, window.innerWidth / window.innerHeight, 0.1, 200);
 camera.position.set(0, 1.7, 8);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
 document.getElementById('app').prepend(renderer.domElement);
 
 // Game core
 const game = new Game({ scene, camera, renderer });
 renderer.domElement.tabIndex = 0;
 
-// Systems
+// Systems - fixed order, no reordering between sessions
 const world = new World(game);
 const player = new Player(game);
 const weapons = new WeaponManager(game);
@@ -40,57 +43,94 @@ const audio = new AudioManager(game);
 const input = new Input(game);
 
 game.setRefs({ player, weapons, world, interactions, enemies, hud, audio, input });
-game.input = input; // alias
+game.input = input;
 
-// Build level
+// Build level - deterministic
 world.build();
 enemies.reset();
 player.reset();
 weapons.reset();
 hud.updateHealth(player.health, player.maxHealth);
-hud.updateAmmo(weapons.current.ammo, weapons.current.reserve);
+hud.updateAmmo(weapons.current.ammo, weapons.current.reserve, weapons.current.magSize);
 hud.updateWeapon(weapons.current.name, weapons.current.fireMode.toUpperCase());
 
-// Overlay handlers
+// --- UI wiring - consistent, non-changing controls ---
+function syncUI() {
+  const sens = input.sensitivity;
+  const fov = input.fov;
+  const inv = input.invertY;
+  ['sens-slider','sens-slider-p'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value = sens;
+  });
+  ['fov-slider','fov-slider-p'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value = fov;
+  });
+  ['invert-y','invert-y-p'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.checked = inv;
+  });
+  const sv=document.getElementById('sens-val'); if(sv) sv.textContent = sens.toFixed(2);
+  const svp=document.getElementById('sens-val-p'); if(svp) svp.textContent = sens.toFixed(2);
+  const fv=document.getElementById('fov-val'); if(fv) fv.textContent = fov + '°';
+  const fvp=document.getElementById('fov-val-p'); if(fvp) fvp.textContent = fov + '°';
+}
+syncUI();
+
+function bindSlider(id, handler){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.addEventListener('input', e=>{
+    handler(e.target.value);
+    syncUI();
+  });
+}
+bindSlider('sens-slider', v=> input.sensitivity = parseFloat(v));
+bindSlider('sens-slider-p', v=> input.sensitivity = parseFloat(v));
+bindSlider('fov-slider', v=> input.fov = parseFloat(v));
+bindSlider('fov-slider-p', v=> input.fov = parseFloat(v));
+['invert-y','invert-y-p'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('change', e=>{
+    input.invertY = e.target.checked;
+    syncUI();
+  });
+});
+
 const btnStart = document.getElementById('btn-start');
 const btnResume = document.getElementById('btn-resume');
 const btnRestart = document.getElementById('btn-restart');
 const btnRetry = document.getElementById('btn-retry');
-const sensSlider = document.getElementById('sens-slider');
-const fovSlider = document.getElementById('fov-slider');
 
 btnStart?.addEventListener('click', () => game.start());
 btnResume?.addEventListener('click', () => game.resume());
 btnRestart?.addEventListener('click', () => game.restart());
 btnRetry?.addEventListener('click', () => game.restart());
-sensSlider?.addEventListener('input', (e) => { input.sensitivity = parseFloat(e.target.value); });
-fovSlider?.addEventListener('input', (e) => { CONFIG.movement.baseFov = parseFloat(e.target.value); });
 
 renderer.domElement.addEventListener('click', () => {
-  if (game.state === 'playing' && !input.pointerLocked) input.requestPointerLock();
+  if (game.state === 'playing' && !input.pointerLocked) {
+    // Only lock if overlay hidden (not paused)
+    if (document.getElementById('overlay')?.classList.contains('hidden')) input.requestPointerLock();
+  }
   if (game.state === 'menu') game.start();
 });
 
-// Resize
+// Resize - stable
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Head bob / camera effects integrated via player + weapon manager
+// Main loop - fixed dt, no drift
 let lastTime = performance.now() / 1000;
-let frameCount = 0;
-
 function animate() {
   requestAnimationFrame(animate);
   const now = performance.now() / 1000;
   let dt = now - lastTime;
-  dt = Math.min(dt, 0.05); // clamp for stability
+  dt = Math.min(dt, 0.033); // cap 30fps min, prevents huge jumps that feel like control lag
   lastTime = now;
 
-  // always update even if paused to keep UI responsive
   if (game.state === 'playing') {
+    // Fixed update order - always same, no reordering
     player.update(dt);
     weapons.update(dt);
     enemies.update(dt);
@@ -99,40 +139,32 @@ function animate() {
     hud.update(dt);
     game.update(dt);
 
-    // additional camera bob logic (sprint bob, landing)
-    // Applied via player camera rig; add subtle floating to camera for idle breathing
-    const bobTime = game.time * (player.isSprinting ? CONFIG.camera.bobFrequencyWalk * 1.25 : CONFIG.camera.bobFrequencyWalk);
+    // Camera bob - subtle, frame-rate independent, not affecting controls
+    const bobTime = game.time * (player.isSprinting ? CONFIG.camera.bobFrequencyWalk * 1.18 : CONFIG.camera.bobFrequencyWalk);
     const bobAmp = player.isSprinting ? CONFIG.camera.bobAmplitudeSprint : CONFIG.camera.bobAmplitudeWalk;
     let bobY = 0, bobX = 0;
     if (player.isGrounded && player.moveInput.lengthSq() > 0.01 && !player.isADSing) {
-      const speedFactor = player.velocity.length() / CONFIG.movement.walkSpeed;
+      const speedFactor = Math.min(1.6, player.velocity.length() / CONFIG.movement.walkSpeed);
       bobY = Math.sin(bobTime) * bobAmp * speedFactor;
-      bobX = Math.cos(bobTime * 0.5) * bobAmp * 0.5 * speedFactor;
-      if (player.isCrouching) { bobY *= 0.55; bobX *= 0.55; }
+      bobX = Math.cos(bobTime * 0.5) * bobAmp * 0.45 * speedFactor;
+      if (player.isCrouching) { bobY *= 0.5; bobX *= 0.5; }
     } else if (!player.isADSing) {
-      // idle breathing
-      bobY = Math.sin(game.time * 1.05) * 0.006;
-      bobX = Math.cos(game.time * 0.7) * 0.004;
+      bobY = Math.sin(game.time * 1.02) * 0.0055;
+      bobX = Math.cos(game.time * 0.68) * 0.0035;
     }
-    camera.position.y += bobY * 0.35;
-    camera.position.x += bobX;
-
-    // landing kick handled via player velocity? add small impulse on fall
+    // Apply as offset, but keep within camera rig - slight, not jarring
+    camera.position.y += bobY * 0.28;
+    camera.position.x += bobX * 0.28;
   } else {
-    // still update HUD indicators
     hud.update(dt);
   }
-
-  // debug
-  frameCount++;
   renderer.render(scene, camera);
 }
 animate();
 
-// Expose for tests / console
+// Expose
 window.__GAME__ = game;
 window.__CONFIG__ = CONFIG;
 
-// Build verification log
-console.log('%cGAUNTLET FPS%c Foundation loaded — press Click to Play', 'background:#e63946;color:white;padding:4px 8px;border-radius:4px', 'color:#8ea6bf;padding:4px');
-console.log('Systems:', { player, weapons, world, enemies, hud, audio, input });
+console.log('%cGAUNTLET%c v2 — locked controls, elaborate HUD', 'background:#e63946;color:white;padding:4px 8px', 'color:#8ea6bf;padding:4px');
+console.log('Input locked:', { sens: input.sensitivity, fov: input.fov, invert: input.invertY });

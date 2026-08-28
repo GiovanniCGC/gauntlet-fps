@@ -4,74 +4,188 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GAUNTLET — Tactical FPS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Rajdhani:wght@600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
     <div id="app">
-      <div id="crosshair"></div>
-      <div id="hud">
-        <div id="hud-top">
-          <div id="weapon-info">
-            <span id="weapon-name">M4A1</span>
-            <span id="weapon-mode">AUTO</span>
-          </div>
-          <div id="health-bar">
-            <div id="health-fill"></div>
-            <span id="health-text">100</span>
-          </div>
-        </div>
-        <div id="hud-bottom">
-          <div id="ammo-display">
-            <span id="ammo-mag">30</span>
-            <span id="ammo-sep">/</span>
-            <span id="ammo-reserve">90</span>
-          </div>
-          <div id="interaction-prompt" class="hidden">Press [F] to interact</div>
-        </div>
-        <div id="state-indicators">
-          <span id="indicator-crouch" class="indicator">CROUCH</span>
-          <span id="indicator-sprint" class="indicator">SPRINT</span>
-          <span id="indicator-ads" class="indicator">ADS</span>
-          <span id="indicator-lean" class="indicator">LEAN</span>
-        </div>
+      <!-- Crosshair - dynamic -->
+      <div id="crosshair">
+        <div class="ch-dot"></div>
+        <div class="ch-line ch-top"></div>
+        <div class="ch-line ch-bottom"></div>
+        <div class="ch-line ch-left"></div>
+        <div class="ch-line ch-right"></div>
       </div>
 
+      <!-- HUD - elaborate tactical -->
+      <div id="hud">
+        <!-- Top bar: compass + objective -->
+        <div id="hud-top">
+          <div id="hud-top-left">
+            <div id="objective">
+              <span class="obj-label">OPERATION</span>
+              <span class="obj-value">GAUNTLET LOOP <em>— INFILTRATE</em></span>
+            </div>
+            <div id="weapon-info">
+              <span id="weapon-name">M4A1</span>
+              <span id="weapon-mode">AUTO</span>
+              <span id="weapon-cal">5.56×45</span>
+            </div>
+          </div>
+
+          <div id="compass">
+            <div class="compass-bar">
+              <span>W</span><span>NW</span><span>N</span><span>NE</span><span>E</span><span>SE</span><span>S</span><span>SW</span><span>W</span>
+            </div>
+            <div class="compass-needle">▼</div>
+            <div class="compass-deg" id="compass-deg">0°</div>
+          </div>
+
+          <div id="hud-top-right">
+            <div id="health-module">
+              <div class="mod-label">VITALS</div>
+              <div id="health-bar">
+                <div id="health-fill"></div>
+                <div class="health-segments"><span></span><span></span><span></span><span></span><span></span></div>
+              </div>
+              <span id="health-text">100</span>
+              <span class="health-unit">BPM 78</span>
+            </div>
+            <div id="status-xt">
+              <span id="indicator-crouch" class="indicator"><i></i>CROUCH</span>
+              <span id="indicator-sprint" class="indicator"><i></i>SPRINT</span>
+              <span id="indicator-ads" class="indicator"><i></i>ADS</span>
+              <span id="indicator-lean" class="indicator"><i></i>LEAN</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom HUD -->
+        <div id="hud-bottom">
+          <div id="hud-bottom-left">
+            <div id="stamina-indicator" class="hidden"></div>
+          </div>
+
+          <div id="hud-center">
+            <div id="interaction-prompt" class="hidden">
+              <span class="keycap">F</span>
+              <span class="prompt-text">Interact</span>
+            </div>
+            <div id="reload-bar" class="hidden"><div id="reload-fill"></div></div>
+          </div>
+
+          <div id="hud-bottom-right">
+            <div id="ammo-module">
+              <div id="ammo-display">
+                <div class="ammo-main">
+                  <span id="ammo-mag">30</span>
+                  <span id="ammo-sep">/</span>
+                  <span id="ammo-reserve">90</span>
+                </div>
+                <div class="ammo-meta">
+                  <span id="ammo-type">30 RD MAG</span>
+                  <span id="ammo-total">90 RES</span>
+                </div>
+              </div>
+              <div class="ammo-hint">
+                <span class="hint-key">[R]</span> RELOAD &nbsp; <span class="hint-key">[1]</span> M4 &nbsp; <span class="hint-key">[2]</span> G19
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="hit-indicator" class="hidden"></div>
+        <div id="damage-vignette"></div>
+      </div>
+
+      <!-- Overlay screens -->
       <div id="overlay">
         <div id="start-screen" class="screen">
-          <h1>GAUNTLET</h1>
-          <p class="subtitle">Tactical FPS — Gauntlet Loop Foundation</p>
-          <div class="controls-grid">
-            <div><b>WASD</b> Move</div>
-            <div><b>Mouse</b> Look</div>
-            <div><b>Shift</b> Sprint</div>
-            <div><b>Ctrl/C</b> Crouch</div>
-            <div><b>Space</b> Jump</div>
-            <div><b>Q/E</b> Lean</div>
-            <div><b>LMB</b> Fire</div>
-            <div><b>RMB</b> ADS</div>
-            <div><b>R</b> Reload</div>
-            <div><b>1/2</b> Weapons</div>
-            <div><b>F</b> Interact</div>
-            <div><b>Esc</b> Pause</div>
+          <div class="screen-inner">
+            <div class="screen-left">
+              <div class="brand">
+                <div class="brand-kicker">TACTICAL DIVISION // EST 2026</div>
+                <h1>GAUNTLET</h1>
+                <div class="brand-sub">LOOP 01 — COMBAT PROVING GROUND</div>
+              </div>
+              <div class="brief">
+                <h3>OPERATION BRIEF</h3>
+                <p>Hostiles hold a 3-sector compound. Test close, mid and long lanes. Use <b>Q/E</b> to peek corners, <b>Ctrl</b> for low cover, <b>Shift</b> to push. Clear 5 contacts. Doors are breachable, ammo is scarce.</p>
+                <div class="brief-stats">
+                  <div><span>SECTORS</span><b>03</b></div>
+                  <div><span>HOSTILES</span><b>05</b></div>
+                  <div><span>DIFFICULTY</span><b>TACTICAL</b></div>
+                </div>
+              </div>
+              <div class="controls-panel">
+                <h4>CONTROLS — LOCKED INPUT</h4>
+                <div class="controls-grid">
+                  <div><b>WASD</b> Move</div>
+                  <div><b>Mouse</b> Look</div>
+                  <div><b>Shift</b> Sprint <em>(forward)</em></div>
+                  <div><b>Ctrl / C</b> Crouch</div>
+                  <div><b>Space</b> Jump</div>
+                  <div><b>Q / E</b> Lean</div>
+                  <div><b>LMB</b> Fire</div>
+                  <div><b>RMB</b> ADS</div>
+                  <div><b>R</b> Reload</div>
+                  <div><b>1 / 2</b> Switch</div>
+                  <div><b>F</b> Interact</div>
+                  <div><b>Esc</b> Pause</div>
+                </div>
+                <div class="controls-note">Controls are fixed &amp; consistent — no auto-remapping. Sensitivity persists between sessions.</div>
+              </div>
+            </div>
+
+            <div class="screen-right">
+              <div class="loadout-card">
+                <div class="card-head">LOADOUT // PRIMARY</div>
+                <div class="loadout-weapon"><span>M4A1</span><em>5.56 — 30+90 — AUTO</em></div>
+                <div class="loadout-weapon secondary"><span>G19</span><em>9MM — 17+51 — SEMI</em></div>
+                <div class="loadout-meta">+ M1014 on field pickup</div>
+              </div>
+              <button id="btn-start" class="btn-primary">
+                <span class="btn-main">ENTER GAUNTLET</span>
+                <span class="btn-sub">CLICK TO LOCK POINTER • ESC TO UNLOCK</span>
+              </button>
+              <div class="settings-mini">
+                <label><span>Sensitivity</span><input id="sens-slider" type="range" min="0.3" max="2.2" step="0.05" value="1.0" /><span id="sens-val">1.00</span></label>
+                <label><span>FOV</span><input id="fov-slider" type="range" min="72" max="96" step="1" value="85" /><span id="fov-val">85°</span></label>
+                <label class="check"><span>Invert Y</span><input id="invert-y" type="checkbox" /></label>
+              </div>
+              <div class="hint">Time is no issue — polish over speed. Designed for 60fps, no jitter, no clipping.</div>
+            </div>
           </div>
-          <button id="btn-start" class="btn-primary">ENTER GAUNTLET — CLICK TO PLAY</button>
-          <p class="hint">Click to lock pointer. Press ESC to unlock.</p>
         </div>
 
         <div id="pause-screen" class="screen hidden">
-          <h2>PAUSED</h2>
-          <button id="btn-resume" class="btn-primary">RESUME</button>
-          <button id="btn-restart" class="btn-secondary">RESTART GAUNTLET</button>
-          <div class="settings">
-            <label>Sensitivity <input id="sens-slider" type="range" min="0.1" max="3" step="0.1" value="1.0" /></label>
-            <label>FOV <input id="fov-slider" type="range" min="70" max="100" step="1" value="85" /></label>
+          <div class="screen-inner centered">
+            <h2>ON HOLD</h2>
+            <div class="pause-stats">
+              <div><span>KILLS</span><b id="pause-kills">0</b></div>
+              <div><span>TIME</span><b id="pause-time">0.0s</b></div>
+              <div><span>HEALTH</span><b id="pause-hp">100</b></div>
+            </div>
+            <button id="btn-resume" class="btn-primary">RESUME — ESC</button>
+            <button id="btn-restart" class="btn-secondary">RESTART GAUNTLET</button>
+            <div class="settings">
+              <label><span>Sensitivity</span><input id="sens-slider-p" type="range" min="0.3" max="2.2" step="0.05" value="1.0" /><span id="sens-val-p">1.00</span></label>
+              <label><span>FOV</span><input id="fov-slider-p" type="range" min="72" max="96" step="1" value="85" /><span id="fov-val-p">85°</span></label>
+              <label class="check"><span>Invert Look Y</span><input id="invert-y-p" type="checkbox" /></label>
+            </div>
           </div>
         </div>
 
         <div id="death-screen" class="screen hidden">
-          <h2>NEUTRALIZED</h2>
-          <p id="death-stats"></p>
-          <button id="btn-retry" class="btn-primary">RE-ENTER GAUNTLET</button>
+          <div class="screen-inner centered">
+            <h2>NEUTRALIZED</h2>
+            <p id="death-stats"></p>
+            <div id="death-report"></div>
+            <button id="btn-retry" class="btn-primary">RE-ENTER GAUNTLET</button>
+          </div>
         </div>
       </div>
 

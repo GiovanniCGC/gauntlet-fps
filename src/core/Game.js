@@ -43,13 +43,17 @@ export class Game {
     document.getElementById('pause-screen')?.classList.remove('hidden');
     document.getElementById('start-screen')?.classList.add('hidden');
     document.getElementById('death-screen')?.classList.add('hidden');
-    this.input?.exitPointerLock();
+    this.input?.clearAllKeys();
+    // delay exit to avoid double-trigger
+    setTimeout(()=> this.input?.exitPointerLock(), 30);
   }
   resume() {
     if (this.state !== 'paused') return;
     this.state = 'playing';
     this.hideOverlay();
-    this.input?.requestPointerLock();
+    this.input?.clearAllKeys();
+    // small delay before lock to let overlay hide
+    setTimeout(()=> this.input?.requestPointerLock(), 80);
   }
   togglePause() {
     if (this.state === 'playing') this.pause();
@@ -80,9 +84,16 @@ export class Game {
 
   onPointerLockChange(locked) {
     if (this.state === 'playing' && !locked) {
-      // don't auto-pause if just died
-      // but if unlocked via ESC, pause
-      if (document.visibilityState === 'visible') this.pause();
+      // Only auto-pause if ESC was used (pointer lock lost while game visible and not via blur)
+      // Input blur already handles alt-tab; avoid double pause spam
+      if (document.visibilityState === 'visible' && !document.hidden) {
+        // Debounce: if we just resumed, ignore quick unlock
+        const now = performance.now();
+        if (!this._lastPause || now - this._lastPause > 600) {
+          this._lastPause = now;
+          this.pause();
+        }
+      }
     }
   }
 

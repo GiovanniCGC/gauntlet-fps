@@ -79,13 +79,23 @@ export class Player {
     const input = this.game.input;
     if (!input) return;
 
-    // Mouse look
+    // Mouse look - stable & consistent, invert Y support, no drift
     if (input.pointerLocked && this.game.state === 'playing') {
       const md = input.consumeMouseDelta();
-      const sens = CONFIG.camera.mouseSensitivity * (input.sensitivity ?? 1);
-      this.yaw -= md.x * sens;
-      this.pitch -= md.y * sens;
-      this.pitch = Utils.clamp(this.pitch, this.pitchLimits.min, this.pitchLimits.max);
+      // Ignore huge deltas from focus loss (already clamped in Input) but also ignore zero
+      if (md.x === 0 && md.y === 0) { /* no look */ }
+      else {
+        const sens = CONFIG.camera.mouseSensitivity * (input.sensitivity ?? 1);
+        const invert = input.invertY ? 1 : -1; // invertY = true means moving mouse up looks up (pitch +=)
+        this.yaw -= md.x * sens;
+        this.pitch += md.y * sens * invert; // invert handling: default invert=-1 gives pitch -= md.y
+        // But our invert logic above already uses invert, so correct: when invertY false, pitch -= md.y (original)
+        // Re-evaluate: if invertY false, we want pitch -= md.y ; if true, pitch += md.y
+        // So with invert var = input.invertY ? 1 : -1, then pitch += md.y * sens * invert
+        // When invert false, invert=-1 => pitch += md.y * -1 = pitch -= md.y correct.
+        // When invert true, invert=1 => pitch += md.y correct.
+        this.pitch = Utils.clamp(this.pitch, this.pitchLimits.min, this.pitchLimits.max);
+      }
     }
 
     // Read movement input
