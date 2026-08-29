@@ -175,20 +175,19 @@ export class Player {
       if (this.velocity.y < 0) this.velocity.y = -0.5; // stick to ground
     }
 
-    // Compute wish direction relative to yaw
-    const forward = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw) * -1); // careful: yaw 0 looks toward -Z
-    // Actually standard: forward = (sin(yaw),0, -cos(yaw))
-    forward.y = 0; forward.normalize();
-    const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).multiplyScalar(-1); // right = forward x up
-    // Simpler: right = (cos(yaw),0, sin(yaw)) ??? let's compute correctly
-    // Let's recompute cleanly:
-    // yaw rotates around Y, so basis: forward = (Math.sin(yaw),0, -Math.cos(yaw)), right = (Math.cos(yaw),0, Math.sin(yaw))
-    const fwd = new THREE.Vector3(Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-    const rgt = new THREE.Vector3(Math.cos(this.yaw), 0, Math.sin(this.yaw));
-
+    // Compute wish direction - 100% WASD FIX: optie world vs camera
     const wishDir = new THREE.Vector3();
-    wishDir.addScaledVector(rgt, this.moveInput.x);
-    wishDir.addScaledVector(fwd, this.moveInput.y);
+    if (cfg.wasdWorldRelative) {
+      // WORLD-RELATIVE: WASD altijd noord/zuid, onafhankelijk van kijkrichting
+      // W = -Z (north), S = +Z, A = -X, D = +X
+      wishDir.set(this.moveInput.x, 0, -this.moveInput.y);
+    } else {
+      // CAMERA-RELATIVE: standaard FPS, stabiel maar met yaw
+      const fwd = new THREE.Vector3(Math.sin(this.yaw), 0, -Math.cos(this.yaw));
+      const rgt = new THREE.Vector3(Math.cos(this.yaw), 0, Math.sin(this.yaw));
+      wishDir.addScaledVector(rgt, this.moveInput.x);
+      wishDir.addScaledVector(fwd, this.moveInput.y);
+    }
     if (wishDir.lengthSq() > 0.001) wishDir.normalize();
 
     // Determine speed - WASD fix: direct, geen wisselende penalty
@@ -200,40 +199,27 @@ export class Player {
     const weaponPen = this.game.weapons?.current?.movementPenalty ?? 1.0;
     targetSpeed *= weaponPen > 0.94 ? 1.0 : weaponPen; // clamp zodat WASD stabiel blijft
 
-    // Acceleration vs deceleration
-    let accel = cfg.acceleration;
-    let decel = cfg.deceleration;
-    if (!this.isGrounded) { accel *= cfg.airControlFactor; decel *= cfg.airControlFactor; }
-    if (this.isCrouching) { accel *= 0.85; }
-
-    // Apply horizontal velocity with acceleration
-    const currentHoriz = new THREE.Vector2(this.velocity.x, this.velocity.z);
-    const wishSpeed2D = wishDir.lengthSq() > 0 ? targetSpeed : 0;
-    const wishVel = new THREE.Vector2(wishDir.x * wishSpeed2D, wishDir.z * wishSpeed2D);
-
-    // Accelerate towards wishVel
-    const velDiff = wishVel.clone().sub(currentHoriz);
-    const isAccelerating = wishVel.lengthSq() > 0.001;
-    const a = isAccelerating ? accel : decel;
-    const maxDelta = a * dt;
-    const diffLen = velDiff.length();
-    if (diffLen > 0.001) {
-      const add = velDiff.normalize().multiplyScalar(Math.min(diffLen, maxDelta));
-      currentHoriz.add(add);
-    } else if (!isAccelerating) {
-      // apply friction
-      const friction = cfg.groundFriction * dt;
-      const len = currentHoriz.length();
-      if (len > 0) currentHoriz.multiplyScalar(Math.max(0, 1 - friction / (len + 0.001)));
+    // Apply horizontal velocity - GROUNDED = DIRECT 1:1 (geen accel float), AIR = lerp
+    if (this.isGrounded) {
+      // Direct - WASD voelt exact, verandert niet met kijkrichting (als worldRelative aan) of blijft stabiel camera-relative
+      this.velocity.x = wishDir.x * targetSpeed;
+      this.velocity.z = wishDir.z * targetSpeed;
+      // geen friction accel nodig op grond
+    } else {
+      // Air control - wel lerp voor tactische air
+      let accel = cfg.acceleration * cfg.airControlFactor;
+      const currentHoriz = new THREE.Vector2(this.velocity.x, this.velocity.z);
+      const wishVel = new THREE.Vector2(wishDir.x * targetSpeed, wishDir.z * targetSpeed);
+      const diff = wishVel.clone().sub(currentHoriz);
+      const maxDelta = accel * dt;
+      const len = diff.length();
+      if (len > 0.001) {
+        diff.normalize().multiplyScalar(Math.min(len, maxDelta));
+        currentHoriz.add(diff);
+      }
+      this.velocity.x = currentHoriz.x;
+      this.velocity.z = currentHoriz.y;
     }
-
-    // clamp to target speed + small tolerance
-    if (currentHoriz.length() > targetSpeed + 0.2) {
-      currentHoriz.normalize().multiplyScalar(targetSpeed);
-    }
-
-    this.velocity.x = currentHoriz.x;
-    this.velocity.z = currentHoriz.y;
 
     // Step handling & slope handling prep
     const world = this.game.world;

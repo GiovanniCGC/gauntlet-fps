@@ -72,6 +72,9 @@ function syncUI() {
   ['azerty','azerty-p'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.checked = az;
   });
+  ['wasd-world','wasd-world-p'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.checked = input.wasdWorld;
+  });
   const sv=document.getElementById('sens-val'); if(sv) sv.textContent = sens.toFixed(2);
   const svp=document.getElementById('sens-val-p'); if(svp) svp.textContent = sens.toFixed(2);
   const fv=document.getElementById('fov-val'); if(fv) fv.textContent = fov + '°';
@@ -102,6 +105,13 @@ bindSlider('fov-slider-p', v=> input.fov = parseFloat(v));
   const el=document.getElementById(id);
   if(el) el.addEventListener('change', e=>{
     input.azerty = e.target.checked;
+    syncUI();
+  });
+});
+['wasd-world','wasd-world-p'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('change', e=>{
+    input.wasdWorld = e.target.checked;
     syncUI();
   });
 });

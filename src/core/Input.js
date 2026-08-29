@@ -12,6 +12,9 @@ export class Input {
     this._fov = parseFloat(localStorage.getItem('gauntlet_fov') || CONFIG.movement.baseFov);
     this._invertY = localStorage.getItem('gauntlet_invertY') === '1';
     this._azerty = localStorage.getItem('gauntlet_azerty') === '1';
+    const wasdStored = localStorage.getItem('gauntlet_wasdWorld');
+    this._wasdWorld = wasdStored === null ? true : wasdStored === '1'; // FIX: default true = WASD niet meer draaiend
+    CONFIG.movement.wasdWorldRelative = this._wasdWorld;
     CONFIG.movement.baseFov = this._fov;
     this._lastMouseTime = performance.now();
 
@@ -60,6 +63,12 @@ export class Input {
   set azerty(v) {
     this._azerty = !!v;
     localStorage.setItem('gauntlet_azerty', this._azerty ? '1' : '0');
+  }
+  get wasdWorld() { return this._wasdWorld; }
+  set wasdWorld(v) {
+    this._wasdWorld = !!v;
+    CONFIG.movement.wasdWorldRelative = this._wasdWorld;
+    localStorage.setItem('gauntlet_wasdWorld', this._wasdWorld ? '1' : '0');
   }
 
   isDown(code) { return this.keys.has(code); }
