@@ -12,9 +12,10 @@ export class Input {
     this._fov = parseFloat(localStorage.getItem('gauntlet_fov') || CONFIG.movement.baseFov);
     this._invertY = localStorage.getItem('gauntlet_invertY') === '1';
     this._azerty = localStorage.getItem('gauntlet_azerty') === '1';
-    const wasdStored = localStorage.getItem('gauntlet_wasdWorld');
-    this._wasdWorld = wasdStored === null ? true : wasdStored === '1'; // FIX: default true = WASD niet meer draaiend
-    CONFIG.movement.wasdWorldRelative = this._wasdWorld;
+    // FORCE FIX: W moet waar je kijkt lopen (camera-relative) - was per ongeluk world-relative
+    localStorage.setItem('gauntlet_wasdWorld','0');
+    this._wasdWorld = false;
+    CONFIG.movement.wasdWorldRelative = false;
     CONFIG.movement.baseFov = this._fov;
     this._lastMouseTime = performance.now();
 

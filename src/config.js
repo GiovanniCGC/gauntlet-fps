@@ -14,7 +14,7 @@ export const CONFIG = {
     acceleration: 68,
     deceleration: 64,
     groundFriction: 14.0,
-    wasdWorldRelative: true, // FIX: WASD nu standaard world-stable, draait niet met camera
+    wasdWorldRelative: false, // FIX: W = waar je kijkt (camera-relative) zoals normale FPS
     stepHeight: 0.35,
     slopeLimit: 46, // degrees
     crouchHeight: 1.05,
