@@ -3,40 +3,130 @@ import { createBoxMesh } from '../core/Utils.js';
 import { Weapon } from '../weapons/Weapon.js';
 import { WEAPONS } from '../weapons/definitions.js';
 
-function makeConcreteTexture() {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 256;
-  const g = c.getContext('2d');
-  g.fillStyle = '#1b242e'; g.fillRect(0,0,256,256);
-  for (let i=0;i<4200;i++){
-    const x=Math.random()*256, y=Math.random()*256, s=Math.random()*18+2;
-    const v=Math.floor(22+Math.random()*18);
-    g.fillStyle=`rgba(${v+12},${v+18},${v+22},${0.06+Math.random()*0.09})`;
-    g.fillRect(x,y,s,s*0.7);
+function makeConcretePro() {
+  const c=document.createElement('canvas'); c.width=512; c.height=512;
+  const g=c.getContext('2d');
+  // base concrete with subtle gradient
+  const grad=g.createLinearGradient(0,0,512,512);
+  grad.addColorStop(0,'#1e2a36'); grad.addColorStop(0.5,'#1a242f'); grad.addColorStop(1,'#1d2b39');
+  g.fillStyle=grad; g.fillRect(0,0,512,512);
+  // large stains / oil
+  for(let i=0;i<22;i++){
+    const x=Math.random()*512, y=Math.random()*512, rx=30+Math.random()*90, ry=18+Math.random()*45;
+    g.fillStyle=`rgba(${12+Math.random()*10},${18+Math.random()*10},${24+Math.random()*10},${0.09+Math.random()*0.12})`;
+    g.beginPath(); g.ellipse(x,y,rx,ry,Math.random()*Math.PI,0,Math.PI*2); g.fill();
   }
-  // grid lines for subtle tiles
-  g.strokeStyle='rgba(255,255,255,0.04)'; g.lineWidth=1;
-  for(let i=0;i<256;i+=32){ g.beginPath(); g.moveTo(i,0); g.lineTo(i,256); g.stroke(); }
-  for(let i=0;i<256;i+=32){ g.beginPath(); g.moveTo(0,i); g.lineTo(256,i); g.stroke(); }
+  // pebbles / aggregate
+  for(let i=0;i<9000;i++){
+    const x=Math.random()*512, y=Math.random()*512, s=Math.random()*2.2+0.6;
+    const v=18+Math.random()*28;
+    g.fillStyle=`rgba(${v+14},${v+20},${v+26},${0.18+Math.random()*0.22})`;
+    g.beginPath(); g.arc(x,y,s,0,Math.PI*2); g.fill();
+  }
+  // cracks - thin lines
+  g.strokeStyle='rgba(0,0,0,0.18)'; g.lineWidth=1;
+  for(let i=0;i<18;i++){
+    let x=Math.random()*512, y=Math.random()*512;
+    g.beginPath(); g.moveTo(x,y);
+    for(let s=0;s<6+Math.random()*8;s++){
+      x+= (Math.random()-0.5)*42; y+= (Math.random()-0.5)*42;
+      g.lineTo(x,y);
+    }
+    g.stroke();
+  }
+  // tile grid with wear
+  g.strokeStyle='rgba(255,255,255,0.035)'; g.lineWidth=1;
+  for(let i=0;i<512;i+=64){ g.beginPath(); g.moveTo(i,0); g.lineTo(i,512); g.stroke(); }
+  for(let i=0;i<512;i+=64){ g.beginPath(); g.moveTo(0,i); g.lineTo(512,i); g.stroke(); }
+  // edge wear
+  g.strokeStyle='rgba(0,0,0,0.14)'; g.lineWidth=2; g.strokeRect(1,1,510,510);
   const tex=new THREE.CanvasTexture(c);
-  tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(11,11); tex.anisotropy=8;
-  tex.colorSpace=THREE.SRGBColorSpace;
+  tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(9,9); tex.anisotropy=8; tex.colorSpace=THREE.SRGBColorSpace;
   return tex;
 }
-function makeWallTexture() {
-  const c=document.createElement('canvas'); c.width=256; c.height=256;
+function makePlasterPro() {
+  const c=document.createElement('canvas'); c.width=512; c.height=512;
   const g=c.getContext('2d');
-  g.fillStyle='#2a3848'; g.fillRect(0,0,256,256);
-  // plaster streaks
-  for(let i=0;i<900;i++){
-    const x=Math.random()*256, y=Math.random()*256, w=Math.random()*70+10, h=Math.random()*2+1;
-    g.fillStyle=`rgba(255,255,255,${0.04+Math.random()*0.05})`;
+  g.fillStyle='#2c3d4f'; g.fillRect(0,0,512,512);
+  // plaster layers
+  for(let i=0;i<1400;i++){
+    const x=Math.random()*512, y=Math.random()*512, w= Math.random()*120+18, h=Math.random()*3+0.8;
+    g.fillStyle=`rgba(255,255,255,${0.035+Math.random()*0.05})`;
     g.fillRect(x,y,w,h);
   }
-  g.strokeStyle='rgba(0,0,0,0.12)'; g.lineWidth=2;
-  g.strokeRect(0,0,256,256);
+  // subtle plaster bumps
+  for(let i=0;i<6000;i++){
+    const x=Math.random()*512, y=Math.random()*512, r=Math.random()*1.4;
+    g.fillStyle=`rgba(${200+Math.random()*30},${210+Math.random()*30},${220+Math.random()*20},0.08)`;
+    g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill();
+  }
+  // vertical seams every 3m
+  g.strokeStyle='rgba(0,0,0,0.07)'; g.lineWidth=1;
+  for(let i=64;i<512;i+=128){ g.beginPath(); g.moveTo(i,0); g.lineTo(i,512); g.stroke(); }
+  // top highlight / bottom shadow for panels
+  const grad=g.createLinearGradient(0,0,0,32);
+  grad.addColorStop(0,'rgba(255,255,255,0.06)'); grad.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle=grad; g.fillRect(0,0,512,32);
   const tex=new THREE.CanvasTexture(c);
-  tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(2,1);
-  tex.colorSpace=THREE.SRGBColorSpace;
+  tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(1.2,1); tex.anisotropy=8; tex.colorSpace=THREE.SRGBColorSpace;
+  return tex;
+}
+function makeBrickPro(){
+  const c=document.createElement('canvas'); c.width=512; c.height=512;
+  const g=c.getContext('2d');
+  g.fillStyle='#3b2a22'; g.fillRect(0,0,512,512);
+  const brickH=32, brickW=64;
+  for(let y=0;y<512;y+=brickH){
+    const offset = ((y/brickH)%2)* (brickW/2);
+    for(let x=-brickW; x<512; x+=brickW){
+      const bx=x+offset, by=y;
+      const v= (Math.random()*0.15+0.85);
+      const r=Math.floor(58*v), gr=Math.floor(36*v), b=Math.floor(30*v);
+      g.fillStyle=`rgb(${r+10},${gr+6},${b+4})`;
+      g.fillRect(bx+2, by+2, brickW-3, brickH-3);
+      // mortar highlight
+      g.fillStyle='rgba(255,255,255,0.06)'; g.fillRect(bx+2, by+2, brickW-3, 2);
+    }
+  }
+  // mortar lines darker
+  g.strokeStyle='rgba(0,0,0,0.32)'; g.lineWidth=2;
+  for(let y=0;y<512;y+=brickH){ g.beginPath(); g.moveTo(0,y); g.lineTo(512,y); g.stroke(); }
+  for(let x=0;x<512;x+=brickW){ g.beginPath(); g.moveTo(x,0); g.lineTo(x,512); g.stroke(); }
+  const tex=new THREE.CanvasTexture(c);
+  tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(1.8,1); tex.anisotropy=8; tex.colorSpace=THREE.SRGBColorSpace;
+  return tex;
+}
+function makeMetalPro(){
+  const c=document.createElement('canvas'); c.width=256; c.height=256;
+  const g=c.getContext('2d');
+  g.fillStyle='#1e242c'; g.fillRect(0,0,256,256);
+  // brushed lines
+  for(let i=0;i<256;i+=2){
+    const v=Math.random()*0.06+0.02;
+    g.fillStyle=`rgba(255,255,255,${v})`;
+    g.fillRect(0,i,256,1);
+  }
+  // rivets
+  g.fillStyle='#0c0f12';
+  for(let y=16;y<256;y+=64) for(let x=16;x<256;x+=64){ g.beginPath(); g.arc(x,y,3,0,Math.PI*2); g.fill(); g.fillStyle='rgba(255,255,255,0.08)'; g.beginPath(); g.arc(x-1,y-1,1,0,Math.PI*2); g.fill(); g.fillStyle='#0c0f12'; }
+  const tex=new THREE.CanvasTexture(c);
+  tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(2,1); tex.anisotropy=8; tex.colorSpace=THREE.SRGBColorSpace;
+  return tex;
+}
+function makeWoodPro(){
+  const c=document.createElement('canvas'); c.width=512; c.height=256;
+  const g=c.getContext('2d');
+  g.fillStyle='#5a3d1f'; g.fillRect(0,0,512,256);
+  for(let i=0;i<80;i++){
+    const y=Math.random()*256; const wobble=Math.random()*18;
+    g.strokeStyle=`rgba(${30+Math.random()*20},${20+Math.random()*10},${10+Math.random()*10},${0.18+Math.random()*0.14})`;
+    g.lineWidth=1.5+Math.random()*1.2;
+    g.beginPath(); g.moveTo(0,y+wobble);
+    for(let x=0;x<512;x+=24){ g.lineTo(x, y + Math.sin(x*0.02+i)*6 + wobble); }
+    g.stroke();
+  }
+  const tex=new THREE.CanvasTexture(c);
+  tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(1,1); tex.anisotropy=8; tex.colorSpace=THREE.SRGBColorSpace;
   return tex;
 }
 
@@ -96,26 +186,27 @@ export class World {
     const sky=new THREE.Mesh(skyGeo, skyMat);
     scene.add(sky);
 
-    // ---Floor PBR 100x---
-    const concreteTex=makeConcreteTexture();
-    const floorMat=new THREE.MeshStandardMaterial({ map: concreteTex, roughness:0.88, metalness:0.04, color:0xffffff });
-    const floor=new THREE.Mesh(new THREE.PlaneGeometry(120,120), floorMat);
+    // ---Floor PBR 100x realistic---
+    const concretePro=makeConcretePro();
+    const plasterPro=makePlasterPro();
+    const brickPro=makeBrickPro();
+    const metalPro=makeMetalPro();
+    const woodPro=makeWoodPro();
+    const floorMat=new THREE.MeshStandardMaterial({ map: concretePro, roughness:0.82, metalness:0.03, color:0xffffff });
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(128,128), floorMat);
     floor.rotation.x=-Math.PI/2;
     floor.receiveShadow=true;
     scene.add(floor);
     this._addCollider(new THREE.Box3(new THREE.Vector3(-60,-1,-60), new THREE.Vector3(60,0,60)));
-    // Trim around floor edges
-    const edgeMat=new THREE.MeshStandardMaterial({ color:0x0e1a26, roughness:0.9 });
-    // helpers with PBR
-    const wallTex=makeWallTexture();
-    const makePBR = (c, rough=0.82, metal=0.04)=> new THREE.MeshStandardMaterial({ color:c, map: wallTex, roughness: rough, metalness: metal });
+    // helpers with PBR - texture per surface
+    const makePBR = (c, tex, rough=0.82, metal=0.04)=> new THREE.MeshStandardMaterial({ color:c, map: tex, roughness: rough, metalness: metal });
 
-    const addBox = (w,h,d,x,y,z,color=0x2b3642, rough=0.84) => {
-      const mat=makePBR(color, rough, 0.05);
+    const addBox = (w,h,d,x,y,z,color=0x2b3642, rough=0.84, tex=null) => {
+      const t = tex || plasterPro;
+      const mat=makePBR(color, t, rough, 0.04);
       const mesh=createBoxMesh(w,h,d,color, new THREE.Vector3(x,y,z));
       mesh.material = mat;
       mesh.material.needsUpdate=true;
-      // add edge wear via second trim box on top
       this.meshes.add(mesh);
       scene.add(mesh);
       const box=new THREE.Box3().setFromCenterAndSize(new THREE.Vector3(x,y,z), new THREE.Vector3(w,h,d));
@@ -123,8 +214,9 @@ export class World {
       mesh.userData.aabb=box;
       return mesh;
     };
-    const addWall = (x,z,w,h,d, rotY=0, color=0x2b3642, rough=0.85) => {
-      const mat=makePBR(color, rough, 0.03);
+    const addWall = (x,z,w,h,d, rotY=0, color=0x2b3642, rough=0.85, tex=null) => {
+      const t = tex || plasterPro;
+      const mat=makePBR(color, t, rough, 0.03);
       const mesh=createBoxMesh(w,h,d,color, new THREE.Vector3(x,h/2,z));
       mesh.material=mat;
       mesh.rotation.y=rotY;
@@ -145,11 +237,11 @@ export class World {
       return mesh;
     };
 
-    // Perimeter - weathered concrete with height variation
-    addWall(0, -58, 120, 9, 1, 0, 0x1a2736, 0.9);
-    addWall(0, 58, 120, 9, 1, 0, 0x1a2736, 0.9);
-    addWall(-58, 0, 1, 9, 120, 0, 0x1a2736, 0.9);
-    addWall(58, 0, 1, 9, 120, 0, 0x1a2736, 0.9);
+    // Perimeter - mixed brick & concrete for realisme
+    addWall(0, -58, 120, 9, 1, 0, 0x3b2a22, 0.88, brickPro);
+    addWall(0, 58, 120, 9, 1, 0, 0x1a2736, 0.9, plasterPro);
+    addWall(-58, 0, 1, 9, 120, 0, 0x2a333e, 0.88, brickPro);
+    addWall(58, 0, 1, 9, 120, 0, 0x1a2736, 0.9, plasterPro);
 
     // Sector A - close quarters, dark, neon hint
     addWall(-6, -8, 18, 3.35, 0.6, 0, 0x2e3e50, 0.82);
@@ -162,11 +254,11 @@ export class World {
     const lightA=new THREE.Mesh(new THREE.BoxGeometry(4,0.08,0.4), new THREE.MeshStandardMaterial({ color:0x182635, emissive:0xffaa55, emissiveIntensity:0.6 }));
     lightA.position.set(-6, 3.15, -12); scene.add(lightA);
 
-    // Sector B - courtyard with cover, more open, sun hits
-    addWall(14, -10, 14, 3.15, 0.6, 0, 0x2a3848, 0.8);
-    addWall(14, -20, 14, 3.15, 0.6, 0, 0x2a3848, 0.8);
-    addWall(7.5, -15, 0.6, 3.15, 10.6, 0, 0x2a3848, 0.8);
-    addWall(20.5, -15, 0.6, 3.15, 10.6, 0, 0x2a3848, 0.8);
+    // Sector B - courtyard met brick accentmuur voor realisme
+    addWall(14, -10, 14, 3.15, 0.6, 0, 0x3b2a22, 0.88, brickPro);
+    addWall(14, -20, 14, 3.15, 0.6, 0, 0x2a3848, 0.8, plasterPro);
+    addWall(7.5, -15, 0.6, 3.15, 10.6, 0, 0x2a3848, 0.8, plasterPro);
+    addWall(20.5, -15, 0.6, 3.15, 10.6, 0, 0x2e3e50, 0.82, plasterPro);
     addBox(1.85, 1.12, 1.85, 10, 0.56, -15, 0x3b4b5e, 0.78);
     addBox(1.2, 1.45, 2.25, 16, 0.73, -13.5, 0x3b4b5e, 0.78);
     addBox(2.05, 1.04, 1.04, 13, 0.52, -18.2, 0x3b4b5e, 0.78);
@@ -192,7 +284,37 @@ export class World {
     spot.position.set(6, 5.2, -38); spot.target.position.set(6,0,-22); scene.add(spot); scene.add(spot.target);
     addPoint(6, 4.8, -38, 0xfff2a0, 2.5);
 
-    // Cover scattered
+    // ---Detailed windows & frames (geen collision, wel realisme)---
+    const addWindow = (x,y,z,w,h,rotY=0)=>{
+      const frameMat=new THREE.MeshStandardMaterial({ color:0x0e141c, roughness:0.88, metalness:0.12 });
+      const glassMat=new THREE.MeshStandardMaterial({ color:0x6ba3d6, roughness:0.08, metalness:0.85, transparent:true, opacity:0.22 });
+      const frame=new THREE.Mesh(new THREE.BoxGeometry(w+0.14, h+0.14, 0.06), frameMat);
+      frame.position.set(x,y,z); frame.rotation.y=rotY; scene.add(frame);
+      const glass=new THREE.Mesh(new THREE.PlaneGeometry(w, h), glassMat);
+      glass.position.set(x,y,z); glass.rotation.y=rotY;
+      // offset slightly forward to avoid z-fighting
+      if(rotY===0) glass.position.z+=0.04; else glass.position.x+= (rotY>0?0.04:-0.04);
+      scene.add(glass);
+      // cross bars
+      const barV=new THREE.Mesh(new THREE.BoxGeometry(0.02, h, 0.02), frameMat);
+      barV.position.copy(glass.position); barV.rotation.y=rotY; scene.add(barV);
+      const barH=new THREE.Mesh(new THREE.BoxGeometry(w, 0.02, 0.02), frameMat);
+      barH.position.copy(glass.position); barH.rotation.y=rotY; scene.add(barH);
+    };
+    addWindow(-14.5, 1.6, -12, 1.4, 1.1, 0);
+    addWindow(2.5, 1.6, -12, 1.4, 1.1, 0);
+    addWindow(7.5, 1.7, -15, 1.2, 1.0, Math.PI/2);
+    addWindow(20.5, 1.7, -15, 1.2, 1.0, Math.PI/2);
+    // pipes along walls
+    const pipeMat=new THREE.MeshStandardMaterial({ color:0x2b3a4a, roughness:0.65, metalness:0.42 });
+    for(let i=0;i<3;i++){
+      const pipe=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04, 7.8, 10), pipeMat);
+      pipe.rotation.z=Math.PI/2; pipe.position.set(-6, 0.32+i*0.55, -12.28); scene.add(pipe);
+    }
+    const vertPipe=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035, 3.0, 10), pipeMat);
+    vertPipe.position.set(20.2, 1.55, -15); scene.add(vertPipe);
+
+    // Cover scattered - meer variatie met juiste textures
     addBox(2.55, 1.58, 0.72, -10, 0.79, -24, 0x334252,0.82);
     addBox(0.72, 1.58, 2.55, 0, 0.79, -22, 0x334252,0.82);
     addBox(3.05, 1.22, 1.04, -2, 0.61, -10, 0x334252,0.82);
@@ -220,8 +342,26 @@ export class World {
     // Pickups with glow
     this._createPickup(new THREE.Vector3(8,0.45,-6), 'shotgun');
     this._createPickup(new THREE.Vector3(-9,0.45,-12), 'ammo_m4');
-    // Crates with labels
-    for(let i=0;i<3;i++){ const c=createBoxMesh(0.92,0.62,0.92,0x7a5a2e, new THREE.Vector3(-4+i*6,0.31,2)); c.material=new THREE.MeshStandardMaterial({ color:0x7a5a2e, roughness:0.78 }); c.castShadow=true; scene.add(c); }
+    // Crates with wood texture + decals
+    for(let i=0;i<3;i++){
+      const c=createBoxMesh(0.96,0.66,0.96,0x7a5a2e, new THREE.Vector3(-4+i*6,0.33,2));
+      c.material=new THREE.MeshStandardMaterial({ map: woodPro, color:0x9c7a52, roughness:0.82, metalness:0.02 });
+      c.castShadow=true; scene.add(c);
+      // metal straps
+      const strap=new THREE.Mesh(new THREE.BoxGeometry(1.0,0.04,0.04), new THREE.MeshStandardMaterial({ color:0x1e242c, roughness:0.6, metalness:0.55 }));
+      strap.position.set(-4+i*6, 0.52, 2); scene.add(strap);
+    }
+    // Shipping container - metal
+    const contMat=new THREE.MeshStandardMaterial({ map: metalPro, color:0x6a7a8a, roughness:0.58, metalness:0.62 });
+    const cont=new THREE.Mesh(new THREE.BoxGeometry(6.2, 2.45, 2.45), contMat);
+    cont.position.set(26, 1.23, -18); cont.castShadow=true; cont.receiveShadow=true; scene.add(cont);
+    const contBox=new THREE.Box3().setFromCenterAndSize(cont.position.clone(), new THREE.Vector3(6.2,2.45,2.45));
+    this.colliders.push(contBox);
+    // corrugation details (visual only)
+    for(let i=0;i<5;i++){
+      const rib=new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.45, 2.46), new THREE.MeshStandardMaterial({ color:0x4a5a6e, roughness:0.7, metalness:0.5 }));
+      rib.position.set(26 -2.8 + i*1.4, 1.23, -18); scene.add(rib);
+    }
 
     scene.add(this.meshes);
   }
