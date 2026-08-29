@@ -11,6 +11,7 @@ export class Input {
     this._sensitivity = parseFloat(localStorage.getItem('gauntlet_sens') || CONFIG.camera.sensitivity);
     this._fov = parseFloat(localStorage.getItem('gauntlet_fov') || CONFIG.movement.baseFov);
     this._invertY = localStorage.getItem('gauntlet_invertY') === '1';
+    this._azerty = localStorage.getItem('gauntlet_azerty') === '1';
     CONFIG.movement.baseFov = this._fov;
     this._lastMouseTime = performance.now();
 
@@ -55,18 +56,32 @@ export class Input {
     this._invertY = !!v;
     localStorage.setItem('gauntlet_invertY', this._invertY ? '1' : '0');
   }
+  get azerty() { return this._azerty; }
+  set azerty(v) {
+    this._azerty = !!v;
+    localStorage.setItem('gauntlet_azerty', this._azerty ? '1' : '0');
+  }
 
   isDown(code) { return this.keys.has(code); }
 
-  isMoveForward() { return this.isDown(CONFIG.input.moveForward); }
-  isMoveBack() { return this.isDown(CONFIG.input.moveBack); }
-  isMoveLeft() { return this.isDown(CONFIG.input.moveLeft); }
-  isMoveRight() { return this.isDown(CONFIG.input.moveRight); }
+  isMoveForward() {
+    if (this._azerty) return this.isDown('KeyZ') || this.isDown('ArrowUp');
+    return this.isDown(CONFIG.input.moveForward) || this.isDown('ArrowUp');
+  }
+  isMoveBack() { return this.isDown(CONFIG.input.moveBack) || this.isDown('ArrowDown'); }
+  isMoveLeft() {
+    if (this._azerty) return this.isDown('KeyQ') || this.isDown('ArrowLeft');
+    return this.isDown(CONFIG.input.moveLeft) || this.isDown('ArrowLeft');
+  }
+  isMoveRight() { return this.isDown(CONFIG.input.moveRight) || this.isDown('ArrowRight'); }
+  isLeanLeft() {
+    if (this._azerty) return this.isDown('KeyA');
+    return this.isDown(CONFIG.input.leanLeft);
+  }
+  isLeanRight() { return this.isDown(CONFIG.input.leanRight); }
   isSprint() { return this.isDown(CONFIG.input.sprint); }
   isCrouch() { return this.isDown(CONFIG.input.crouch) || this.isDown(CONFIG.input.crouchAlt); }
   isJump() { return this.isDown(CONFIG.input.jump); }
-  isLeanLeft() { return this.isDown(CONFIG.input.leanLeft); }
-  isLeanRight() { return this.isDown(CONFIG.input.leanRight); }
 
   consumeMouseDelta() {
     // clamp to prevent huge jumps after lag/tab switch (max 80px per frame equiv)

@@ -75,6 +75,8 @@ export class Player {
   // Called from main loop
   update(dt) {
     if (this.isDead) return;
+    // inventory open -> blokkeer movement & look
+    if (this.game.weapons?.inventory?.isOpen) { this.moveInput.set(0,0); return; }
     this.timeAlive += dt;
     const input = this.game.input;
     if (!input) return;
@@ -111,12 +113,13 @@ export class Player {
     this.isCrouching = wantCrouch;
     this._targetHeight = this.isCrouching ? CONFIG.movement.crouchHeight : CONFIG.movement.standHeight;
 
-    // Sprint logic - can only sprint if moving forward, not crouched, not ADS, not lean, not in air too much, has input
+    // Sprint - 100% WASD fix: sprint in alle richtingen, geen forward-only lock, stabiel
     const moving = this.moveInput.lengthSq() > 0.01;
-    const forwardOnly = fwd > 0 && Math.abs(this.moveInput.x) < 0.6;
-    const canSprint = moving && forwardOnly && !this.isCrouching && !this.isADSing && this.isGrounded && !this.game.weapons?.isReloading;
+    const canSprint = moving && !this.isCrouching && !this.isADSing && this.isGrounded && !this.game.weapons?.isReloading;
     this.isSprinting = canSprint && input.isSprint();
     if (this.isSprinting) { this.targetLean = 0; } // sprint cancels lean
+    // strafe sprint penalty - iets langzamer zijwaarts
+    this._sprintPenalty = (this.isSprinting && Math.abs(this.moveInput.x) > 0.3) ? 0.88 : 1.0;
 
     // Jump
     if (input.isJump() && this.isGrounded && !this.isCrouching) {
@@ -188,14 +191,14 @@ export class Player {
     wishDir.addScaledVector(fwd, this.moveInput.y);
     if (wishDir.lengthSq() > 0.001) wishDir.normalize();
 
-    // Determine speed
+    // Determine speed - WASD fix: direct, geen wisselende penalty
     let targetSpeed = cfg.walkSpeed;
-    if (this.isSprinting) targetSpeed = cfg.sprintSpeed;
+    if (this.isSprinting) targetSpeed = cfg.sprintSpeed * (this._sprintPenalty ?? 1.0);
     else if (this.isCrouching) targetSpeed = cfg.crouchSpeed;
     if (this.isADSing) targetSpeed *= cfg.adsSpeedMult;
-    // also weapon movement penalty
+    // weapon pen heel subtiel, geen grote WASD wissel
     const weaponPen = this.game.weapons?.current?.movementPenalty ?? 1.0;
-    targetSpeed *= weaponPen;
+    targetSpeed *= weaponPen > 0.94 ? 1.0 : weaponPen; // clamp zodat WASD stabiel blijft
 
     // Acceleration vs deceleration
     let accel = cfg.acceleration;

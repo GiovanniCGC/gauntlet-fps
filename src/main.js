@@ -54,11 +54,12 @@ hud.updateHealth(player.health, player.maxHealth);
 hud.updateAmmo(weapons.current.ammo, weapons.current.reserve, weapons.current.magSize);
 hud.updateWeapon(weapons.current.name, weapons.current.fireMode.toUpperCase());
 
-// --- UI wiring - consistent, non-changing controls ---
+// --- UI wiring - WASD fix, AZERTY toggle ---
 function syncUI() {
   const sens = input.sensitivity;
   const fov = input.fov;
   const inv = input.invertY;
+  const az = input.azerty;
   ['sens-slider','sens-slider-p'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value = sens;
   });
@@ -67,6 +68,9 @@ function syncUI() {
   });
   ['invert-y','invert-y-p'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.checked = inv;
+  });
+  ['azerty','azerty-p'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.checked = az;
   });
   const sv=document.getElementById('sens-val'); if(sv) sv.textContent = sens.toFixed(2);
   const svp=document.getElementById('sens-val-p'); if(svp) svp.textContent = sens.toFixed(2);
@@ -91,6 +95,13 @@ bindSlider('fov-slider-p', v=> input.fov = parseFloat(v));
   const el=document.getElementById(id);
   if(el) el.addEventListener('change', e=>{
     input.invertY = e.target.checked;
+    syncUI();
+  });
+});
+['azerty','azerty-p'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('change', e=>{
+    input.azerty = e.target.checked;
     syncUI();
   });
 });
