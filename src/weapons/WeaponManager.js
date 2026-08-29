@@ -43,92 +43,86 @@ export class WeaponManager {
   }
 
   _createWeaponMesh() {
-    // Detailed viewmodel - 100x: mag, stock, bolt, sight with proper alignment for ADS
-    const mesh = new THREE.Group();
+    // 100x: Echte 3D armen (links+rechts) + per-wapen distinct modellen
+    this.weaponMeshes = {};
+    this.muzzleFlashes = {};
+    this.muzzleLights = {};
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xc7a68a, roughness: 0.68, metalness: 0.02 });
+    const sleeveMat = new THREE.MeshStandardMaterial({ color: 0x16202e, roughness: 0.88 });
     const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1b2127, roughness: 0.58, metalness: 0.28 });
     const darkMat = new THREE.MeshStandardMaterial({ color: 0x0d1216, roughness: 0.62, metalness: 0.22 });
     const metalMat = new THREE.MeshStandardMaterial({ color: 0x1a1e23, roughness: 0.42, metalness: 0.58 });
-    // receiver
-    const recGeo = new THREE.BoxGeometry(0.072, 0.058, 0.30);
-    const rec = new THREE.Mesh(recGeo, bodyMat);
-    rec.position.set(0, -0.078, -0.20); rec.castShadow = true; mesh.add(rec);
-    // handguard
-    const hgGeo = new THREE.BoxGeometry(0.056, 0.038, 0.18);
-    const hg = new THREE.Mesh(hgGeo, darkMat);
-    hg.position.set(0, -0.072, -0.36); mesh.add(hg);
-    // barrel
-    const barrelGeo = new THREE.CylinderGeometry(0.011, 0.011, 0.30, 10);
-    barrelGeo.rotateX(Math.PI / 2);
-    const barrel = new THREE.Mesh(barrelGeo, metalMat);
-    barrel.position.set(0, -0.068, -0.44); mesh.add(barrel);
-    // flash hider
-    const fhGeo = new THREE.CylinderGeometry(0.016, 0.013, 0.045, 8);
-    fhGeo.rotateX(Math.PI / 2);
-    const fh = new THREE.Mesh(fhGeo, metalMat);
-    fh.position.set(0, -0.068, -0.60); mesh.add(fh);
-    // stock
-    const stockGeo = new THREE.BoxGeometry(0.052, 0.08, 0.16);
-    const stock = new THREE.Mesh(stockGeo, darkMat);
-    stock.position.set(0, -0.065, -0.02); mesh.add(stock);
-    // mag (removable visual)
-    const magGeo = new THREE.BoxGeometry(0.038, 0.11, 0.068);
-    const magMat = new THREE.MeshStandardMaterial({ color: 0x0f1419, roughness: 0.85 });
-    this.magMesh = new THREE.Mesh(magGeo, magMat);
-    this.magMesh.position.set(0, -0.14, -0.18); mesh.add(this.magMesh);
-    // charging handle
-    const chGeo = new THREE.BoxGeometry(0.025, 0.012, 0.04);
-    const ch = new THREE.Mesh(chGeo, metalMat);
-    ch.position.set(0.02, -0.048, -0.12); mesh.add(ch);
-    // micro sight - proper ADS alignment (centered to eye)
-    const sightBase = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.015, 0.09), darkMat);
-    sightBase.position.set(0, -0.042, -0.21); mesh.add(sightBase);
-    const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.035, 12), new THREE.MeshStandardMaterial({ color: 0x2a5a7a, roughness:0.2, metalness:0.6, transparent:true, opacity:0.85 }));
-    lens.rotation.x=Math.PI/2; lens.position.set(0, -0.032, -0.21); mesh.add(lens);
-    // laser/flash unit
-    const flashGeo = new THREE.ConeGeometry(0.042, 0.095, 8);
-    flashGeo.rotateX(Math.PI / 2);
-    const flashMat = new THREE.MeshBasicMaterial({ color: 0xffe07a, transparent: true, opacity: 0 });
-    const flash = new THREE.Mesh(flashGeo, flashMat);
-    flash.position.set(0, -0.068, -0.62);
-    flash.name = 'muzzleFlash';
-    mesh.add(flash);
-    // point light for muzzle (no shadow)
-    this.muzzleLight = new THREE.PointLight(0xffcc66, 0, 3.2, 2);
-    this.muzzleLight.position.set(0, -0.068, -0.62);
-    mesh.add(this.muzzleLight);
 
-    mesh.position.set(0.28, -0.22, -0.38);
-    // arm + hand - 100x
-    const armGroup = new THREE.Group();
-    const skinMat = new THREE.MeshStandardMaterial({ color: 0xc7a68a, roughness: 0.68, metalness: 0.02 });
-    const sleeveMat = new THREE.MeshStandardMaterial({ color: 0x16202e, roughness: 0.88 });
-    const foreGeo = new THREE.CylinderGeometry(0.029, 0.032, 0.22, 12);
-    foreGeo.rotateZ(Math.PI/2.4);
-    const forearm = new THREE.Mesh(foreGeo, sleeveMat);
-    forearm.position.set(0.075, -0.145, -0.14);
-    forearm.castShadow = false;
-    armGroup.add(forearm);
-    const handGeo = new THREE.BoxGeometry(0.042, 0.038, 0.058);
-    const hand = new THREE.Mesh(handGeo, skinMat);
-    hand.position.set(0.018, -0.105, -0.22);
-    armGroup.add(hand);
-    const gloveGeo = new THREE.BoxGeometry(0.044, 0.040, 0.046);
-    const gloveMat = new THREE.MeshStandardMaterial({ color: 0x0e141c, roughness: 0.92 });
-    const glove = new THREE.Mesh(gloveGeo, gloveMat);
-    glove.position.set(0.018, -0.105, -0.20);
-    armGroup.add(glove);
-    // fingers wrap
-    const fingerGeo = new THREE.CapsuleGeometry(0.011, 0.03, 4, 8);
-    for(let i=0;i<3;i++){
-      const f=new THREE.Mesh(fingerGeo, skinMat);
-      f.rotation.x=Math.PI/2; f.position.set(0.008+i*0.012, -0.098, -0.26); armGroup.add(f);
-    }
-    mesh.add(armGroup);
-    this.armGroup = armGroup;
+    const createArm = (isLeft) => {
+      const g=new THREE.Group();
+      const side = isLeft ? -1 : 1;
+      // forearm sleeve
+      const foreGeo=new THREE.CylinderGeometry(0.028, 0.031, 0.20, 12);
+      foreGeo.rotateZ(Math.PI/2.5 * side);
+      const forearm=new THREE.Mesh(foreGeo, sleeveMat);
+      forearm.position.set(side*0.065, -0.14, isLeft ? -0.32 : -0.14);
+      g.add(forearm);
+      // hand
+      const hand=new THREE.Mesh(new THREE.BoxGeometry(0.041,0.036,0.055), skinMat);
+      hand.position.set(side*0.015, -0.105, isLeft ? -0.36 : -0.22);
+      g.add(hand);
+      const glove=new THREE.Mesh(new THREE.BoxGeometry(0.043,0.038,0.045), new THREE.MeshStandardMaterial({color:0x0e141c, roughness:0.92}));
+      glove.position.set(side*0.015, -0.105, isLeft ? -0.34 : -0.20);
+      g.add(glove);
+      if(!isLeft){
+        const fg=new THREE.CapsuleGeometry(0.011,0.03,4,8);
+        for(let i=0;i<3;i++){ const f=new THREE.Mesh(fg, skinMat); f.rotation.x=Math.PI/2; f.position.set(0.008+i*0.012, -0.098, -0.26); g.add(f); }
+      } else {
+        // left hand fingers gripping handguard
+        const fg=new THREE.CapsuleGeometry(0.011,0.028,4,8);
+        for(let i=0;i<3;i++){ const f=new THREE.Mesh(fg, skinMat); f.rotation.z=Math.PI/2; f.position.set(side*0.01, -0.12, -0.36+i*0.012); g.add(f); }
+      }
+      return g;
+    };
 
-    this.weaponGroup.add(mesh);
-    this.weaponMesh = mesh;
-    this.muzzleFlash = flash;
+    // M4A1
+    const m4=new THREE.Group();
+    const rec=new THREE.Mesh(new THREE.BoxGeometry(0.072,0.058,0.30), bodyMat); rec.position.set(0,-0.078,-0.20); m4.add(rec);
+    const m4hg=new THREE.Mesh(new THREE.BoxGeometry(0.056,0.038,0.18), darkMat); m4hg.position.set(0,-0.072,-0.36); m4.add(m4hg);
+    const m4bar=new THREE.Mesh(new THREE.CylinderGeometry(0.011,0.011,0.30,10).rotateX(Math.PI/2), metalMat); m4bar.position.set(0,-0.068,-0.44); m4.add(m4bar);
+    const m4fh=new THREE.Mesh(new THREE.CylinderGeometry(0.016,0.013,0.045,8).rotateX(Math.PI/2), metalMat); m4fh.position.set(0,-0.068,-0.60); m4.add(m4fh);
+    const m4stock=new THREE.Mesh(new THREE.BoxGeometry(0.052,0.08,0.16), darkMat); m4stock.position.set(0,-0.065,-0.02); m4.add(m4stock);
+    this.magMesh=new THREE.Mesh(new THREE.BoxGeometry(0.038,0.11,0.068), new THREE.MeshStandardMaterial({color:0x0f1419, roughness:0.85})); this.magMesh.position.set(0,-0.14,-0.18); m4.add(this.magMesh);
+    const m4sight=new THREE.Mesh(new THREE.BoxGeometry(0.038,0.015,0.09), darkMat); m4sight.position.set(0,-0.042,-0.21); m4.add(m4sight);
+    const m4lens=new THREE.Mesh(new THREE.CylinderGeometry(0.011,0.011,0.035,12).rotateX(Math.PI/2), new THREE.MeshStandardMaterial({color:0x2a5a7a, roughness:0.2, metalness:0.6, transparent:true, opacity:0.85})); m4lens.position.set(0,-0.032,-0.21); m4.add(m4lens);
+    const m4flash=new THREE.Mesh(new THREE.ConeGeometry(0.042,0.095,8).rotateX(Math.PI/2), new THREE.MeshBasicMaterial({color:0xffe07a, transparent:true, opacity:0})); m4flash.position.set(0,-0.068,-0.62); m4.add(m4flash);
+    const m4light=new THREE.PointLight(0xffcc66,0,3.2,2); m4light.position.set(0,-0.068,-0.62); m4.add(m4light);
+    m4.add(createArm(false)); m4.add(createArm(true));
+    m4.position.set(0.28,-0.22,-0.38); this.weaponMeshes['m4a1']=m4; this.muzzleFlashes['m4a1']=m4flash; this.muzzleLights['m4a1']=m4light; this.weaponGroup.add(m4);
+
+    // GLOCK - pistol, smaller, single right arm
+    const glock=new THREE.Group();
+    const gFrame=new THREE.Mesh(new THREE.BoxGeometry(0.042,0.052,0.14), bodyMat); gFrame.position.set(0,-0.082,-0.20); glock.add(gFrame);
+    const gSlide=new THREE.Mesh(new THREE.BoxGeometry(0.036,0.028,0.16), metalMat); gSlide.position.set(0,-0.065,-0.22); glock.add(gSlide);
+    const gBar=new THREE.Mesh(new THREE.CylinderGeometry(0.009,0.009,0.12,8).rotateX(Math.PI/2), metalMat); gBar.position.set(0,-0.065,-0.30); glock.add(gBar);
+    const gGrip=new THREE.Mesh(new THREE.BoxGeometry(0.028,0.08,0.045), darkMat); gGrip.position.set(0,-0.13,-0.16); gGrip.rotation.x=Math.PI/10; glock.add(gGrip);
+    const gFlash=new THREE.Mesh(new THREE.ConeGeometry(0.028,0.06,6).rotateX(Math.PI/2), new THREE.MeshBasicMaterial({color:0xffe07a, transparent:true, opacity:0})); gFlash.position.set(0,-0.065,-0.37); glock.add(gFlash);
+    const gLight=new THREE.PointLight(0xffcc66,0,2.2,2); gLight.position.set(0,-0.065,-0.37); glock.add(gLight);
+    const gArm=createArm(false); gArm.position.set(-0.04,0.02,0.04); glock.add(gArm);
+    glock.position.set(0.22,-0.24,-0.32); glock.visible=false; this.weaponMeshes['glock']=glock; this.muzzleFlashes['glock']=gFlash; this.muzzleLights['glock']=gLight; this.weaponGroup.add(glock);
+
+    // M1014 SHOTGUN - bulky, wooden furniture
+    const shot=new THREE.Group();
+    const sRec=new THREE.Mesh(new THREE.BoxGeometry(0.078,0.065,0.32), new THREE.MeshStandardMaterial({color:0x1e2328, roughness:0.6})); sRec.position.set(0,-0.078,-0.20); shot.add(sRec);
+    const sBar=new THREE.Mesh(new THREE.CylinderGeometry(0.018,0.018,0.34,10).rotateX(Math.PI/2), metalMat); sBar.position.set(0,-0.068,-0.44); shot.add(sBar);
+    const sMag=new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,0.18,10).rotateX(Math.PI/2), new THREE.MeshStandardMaterial({color:0x222a30, roughness:0.7})); sMag.position.set(0,-0.092,-0.30); shot.add(sMag);
+    const sWood=new THREE.Mesh(new THREE.BoxGeometry(0.058,0.07,0.18), new THREE.MeshStandardMaterial({color:0x4a2a12, roughness:0.85})); sWood.position.set(0,-0.065,-0.04); shot.add(sWood);
+    const sHg=new THREE.Mesh(new THREE.BoxGeometry(0.062,0.045,0.20), new THREE.MeshStandardMaterial({color:0x3b2a12, roughness:0.9})); sHg.position.set(0,-0.072,-0.34); shot.add(sHg);
+    const sFlash=new THREE.Mesh(new THREE.ConeGeometry(0.05,0.11,8).rotateX(Math.PI/2), new THREE.MeshBasicMaterial({color:0xffe07a, transparent:true, opacity:0})); sFlash.position.set(0,-0.068,-0.64); shot.add(sFlash);
+    const sLight=new THREE.PointLight(0xffcc66,0,3.6,2); sLight.position.set(0,-0.068,-0.64); shot.add(sLight);
+    shot.add(createArm(false)); const leftShot=createArm(true); leftShot.position.set(-0.02,0, -0.02); shot.add(leftShot);
+    shot.position.set(0.30,-0.22,-0.40); shot.visible=false; this.weaponMeshes['shotgun']=shot; this.muzzleFlashes['shotgun']=sFlash; this.muzzleLights['shotgun']=sLight; this.weaponGroup.add(shot);
+
+    // default refs
+    this.weaponMesh = m4;
+    this.muzzleFlash = m4flash;
+    this.muzzleLight = m4light;
+    this.armGroup = m4.getObjectByProperty('isGroup', true); // not needed
   }
 
   onSwitch(idx){
@@ -170,18 +164,21 @@ export class WeaponManager {
   }
 
   _updateViewmodelForWeapon(){
-    // swap viewmodel geometry based on current weapon type - 100x models
-    if(!this.weaponMesh) return;
-    // Clear and rebuild - simpler: just change color/labels for now, but arm stays
-    const id=this.current?.id;
-    // tint barrel for shotgun etc - visual cue
-    this.weaponMesh.traverse(obj=>{
-      if(obj.isMesh && obj.material){
-        if(id==='shotgun') obj.material.color?.set(0x222a30);
-        else if(id==='glock') obj.material.color?.set(0x1a1e23);
-        else obj.material.color?.set(0x1b2127);
-      }
+    if(!this.weaponMeshes) return;
+    const id=this.current?.id || 'm4a1';
+    // hide all, show active
+    Object.entries(this.weaponMeshes).forEach(([key, mesh])=>{
+      mesh.visible = key === id;
+      mesh.traverse(o=>{ if(o.isMesh) o.visible = key===id; });
+      // but keep group visible logic via parent
+      if(key===id) mesh.visible=true;
     });
+    // update refs to active weapon's flash/light/mesh
+    this.weaponMesh = this.weaponMeshes[id] || this.weaponMeshes['m4a1'];
+    this.muzzleFlash = this.muzzleFlashes[id] || this.muzzleFlashes['m4a1'];
+    this.muzzleLight = this.muzzleLights[id] || this.muzzleLights['m4a1'];
+    // ensure only active visible
+    Object.values(this.weaponMeshes).forEach(m=> m.visible = m===this.weaponMesh);
   }
 
   update(dt) {
