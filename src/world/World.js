@@ -372,8 +372,22 @@ export class World {
     if(mesh.userData.isDoor){ mesh.userData.open=!mesh.userData.open; this.game.audio?.play(mesh.userData.open?'door_open':'door_close', mesh.position); return true; }
     if(mesh.userData.isPickup){
       const type=mesh.userData.pickupType;
-      if(type==='shotgun'){ const has=this.game.weapons.weapons.some(w=>w.id==='shotgun'); if(!has){ const s=new Weapon(WEAPONS.shotgun); this.game.weapons.weapons.push(s); this.game.weapons.updateHUD(); } else { const w=this.game.weapons.weapons.find(w=>w.id==='shotgun'); if(w) w.reserve+=12; } this.game.audio?.play('pickup', mesh.position); }
-      else if(type==='ammo_m4'){ const w=this.game.weapons.weapons.find(w=>w.id==='m4a1'); if(w) w.reserve+=60; this.game.audio?.play('pickup', mesh.position); }
+      if(type==='shotgun'){
+        const res=this.game.weapons.inventory.addWeapon(WEAPONS.shotgun);
+        if(res === -1){ // full, just give ammo to existing shotgun if any
+          const w=this.game.weapons.inventory.slots.find(s=>s?.id==='shotgun');
+          if(w) w.reserve+=12;
+        }
+        this.game.audio?.play('pickup', mesh.position);
+      }
+      else if(type==='ammo_m4'){
+        // add to M4 if exists, else to current
+        const w=this.game.weapons.inventory.slots.find(s=>s?.id==='m4a1') || this.game.weapons.inventory.getCurrent();
+        if(w) w.reserve+=60;
+        this.game.audio?.play('pickup', mesh.position);
+        this.game.weapons.inventory.render();
+        this.game.weapons.updateHUD();
+      }
       mesh.visible=false; setTimeout(()=>{ mesh.visible=true; },17000); this.game.weapons.updateHUD(); return true;
     }
     return false;

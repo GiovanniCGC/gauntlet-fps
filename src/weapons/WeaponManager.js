@@ -3,16 +3,20 @@ import { Weapon } from './Weapon.js';
 import { WEAPONS } from './definitions.js';
 import { CONFIG } from '../config.js';
 import { Utils } from '../core/Utils.js';
+import { Inventory } from './Inventory.js';
 
 export class WeaponManager {
   constructor(game) {
     this.game = game;
-    this.weapons = [
-      new Weapon(WEAPONS.m4a1),
-      new Weapon(WEAPONS.glock),
-    ];
-    this.currentIndex = 0;
-    this.current = this.weapons[this.currentIndex];
+    // Inventory 100x: 4 slots, 3D guns + arm handled here
+    this.inventory = new Inventory(game, 4);
+    // Pre-fill with starter loadout
+    this.inventory.slots[0] = new Weapon(WEAPONS.m4a1);
+    this.inventory.slots[1] = new Weapon(WEAPONS.glock);
+    this.inventory.activeIndex = 0;
+    this.weapons = this.inventory.slots; // alias for legacy code
+    this.currentIndex = this.inventory.activeIndex;
+    this.current = this.inventory.getCurrent();
     this.adsProgress = 0;
     this.targetADS = 0;
     this.isADS = false;
@@ -94,13 +98,57 @@ export class WeaponManager {
     mesh.add(this.muzzleLight);
 
     mesh.position.set(0.28, -0.22, -0.38);
+    // arm + hand - 100x
+    const armGroup = new THREE.Group();
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xc7a68a, roughness: 0.68, metalness: 0.02 });
+    const sleeveMat = new THREE.MeshStandardMaterial({ color: 0x16202e, roughness: 0.88 });
+    const foreGeo = new THREE.CylinderGeometry(0.029, 0.032, 0.22, 12);
+    foreGeo.rotateZ(Math.PI/2.4);
+    const forearm = new THREE.Mesh(foreGeo, sleeveMat);
+    forearm.position.set(0.075, -0.145, -0.14);
+    forearm.castShadow = false;
+    armGroup.add(forearm);
+    const handGeo = new THREE.BoxGeometry(0.042, 0.038, 0.058);
+    const hand = new THREE.Mesh(handGeo, skinMat);
+    hand.position.set(0.018, -0.105, -0.22);
+    armGroup.add(hand);
+    const gloveGeo = new THREE.BoxGeometry(0.044, 0.040, 0.046);
+    const gloveMat = new THREE.MeshStandardMaterial({ color: 0x0e141c, roughness: 0.92 });
+    const glove = new THREE.Mesh(gloveGeo, gloveMat);
+    glove.position.set(0.018, -0.105, -0.20);
+    armGroup.add(glove);
+    // fingers wrap
+    const fingerGeo = new THREE.CapsuleGeometry(0.011, 0.03, 4, 8);
+    for(let i=0;i<3;i++){
+      const f=new THREE.Mesh(fingerGeo, skinMat);
+      f.rotation.x=Math.PI/2; f.position.set(0.008+i*0.012, -0.098, -0.26); armGroup.add(f);
+    }
+    mesh.add(armGroup);
+    this.armGroup = armGroup;
+
     this.weaponGroup.add(mesh);
     this.weaponMesh = mesh;
     this.muzzleFlash = flash;
   }
 
+  onSwitch(idx){
+    // called by Inventory
+    this.isSwitching = true;
+    this.switchProgress = 0;
+    this.switchTarget = idx;
+    this.targetADS = 0;
+  }
+
   reset() {
+    // reset inventory to starter loadout
+    this.inventory.slots[0] = new Weapon(WEAPONS.m4a1);
+    this.inventory.slots[1] = new Weapon(WEAPONS.glock);
+    this.inventory.slots[2] = null;
+    this.inventory.slots[3] = null;
+    this.inventory.activeIndex = 0;
+    this.weapons = this.inventory.slots;
     this.weapons.forEach(w => {
+      if(!w) return;
       const def = WEAPONS[w.id];
       w.ammo = def.magSize;
       w.reserve = def.reserve;
@@ -108,7 +156,7 @@ export class WeaponManager {
       w.fireCooldown = 0;
     });
     this.currentIndex = 0;
-    this.current = this.weapons[0];
+    this.current = this.inventory.getCurrent();
     this.isADS = false;
     this.targetADS = 0;
     this.adsProgress = 0;
@@ -116,7 +164,24 @@ export class WeaponManager {
     this.isSwitching = false;
     this.recoilPitch = 0; this.recoilYaw = 0;
     this.shotCount = 0;
+    this.inventory.render();
     this.updateHUD();
+    this._updateViewmodelForWeapon();
+  }
+
+  _updateViewmodelForWeapon(){
+    // swap viewmodel geometry based on current weapon type - 100x models
+    if(!this.weaponMesh) return;
+    // Clear and rebuild - simpler: just change color/labels for now, but arm stays
+    const id=this.current?.id;
+    // tint barrel for shotgun etc - visual cue
+    this.weaponMesh.traverse(obj=>{
+      if(obj.isMesh && obj.material){
+        if(id==='shotgun') obj.material.color?.set(0x222a30);
+        else if(id==='glock') obj.material.color?.set(0x1a1e23);
+        else obj.material.color?.set(0x1b2127);
+      }
+    });
   }
 
   update(dt) {
@@ -161,14 +226,20 @@ export class WeaponManager {
       this.isReloading = false;
     }
 
-    // switching
+    // sync from inventory (if external pickup changed slot)
+    this.current = this.inventory.getCurrent() || this.current;
+    this.currentIndex = this.inventory.activeIndex;
+    this.weapons = this.inventory.slots;
+    // switching (inventory handles)
     if (this.isSwitching) {
       this.switchProgress += dt;
       const dur = CONFIG.weapons.switchTime;
       if (this.switchProgress >= dur) {
         this.isSwitching = false;
         this.currentIndex = this.switchTarget;
-        this.current = this.weapons[this.currentIndex];
+        this.inventory.activeIndex = this.switchTarget;
+        this.current = this.inventory.getCurrent();
+        this._updateViewmodelForWeapon();
         this.updateHUD();
       }
     }
@@ -485,16 +556,20 @@ export class WeaponManager {
   }
 
   switchTo(idx) {
-    if (idx < 0 || idx >= this.weapons.length) return;
-    if (idx === this.currentIndex) return;
+    // delegate to inventory for 1-4 keys
+    if (this.inventory.slots[idx] === null) {
+      this.game.audio?.play('dryfire', this.game.player?.position);
+      return;
+    }
+    if (idx === this.inventory.activeIndex) return;
     if (this.isSwitching) return;
-    if (this.current.isReloading) this.current.cancelReload();
+    if (this.current?.isReloading) this.current.cancelReload();
+    this.inventory.switchTo(idx);
     this.isSwitching = true;
     this.switchProgress = 0;
     this.switchTarget = idx;
     this.isReloading = false;
     this.targetADS = 0;
-    this.game.audio?.play('equip', this.game.player.position);
   }
 
   updateHUD() {

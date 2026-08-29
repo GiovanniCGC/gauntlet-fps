@@ -102,7 +102,7 @@
                 </div>
               </div>
               <div class="ammo-hint">
-                <span class="hint-key">[R]</span> RELOAD &nbsp; <span class="hint-key">[1]</span> M4 &nbsp; <span class="hint-key">[2]</span> G19
+                <span class="hint-key">[R]</span> RELOAD &nbsp; <span class="hint-key">[1-4]</span> WEAPONS &nbsp; <span class="hint-key">[I]</span> INV
               </div>
             </div>
           </div>
@@ -143,8 +143,9 @@
                   <div><b>LMB</b> Fire</div>
                   <div><b>RMB</b> ADS</div>
                   <div><b>R</b> Reload</div>
-                  <div><b>1 / 2</b> Switch</div>
+                  <div><b>1-4</b> Weapons</div>
                   <div><b>F</b> Interact</div>
+                  <div><b>I / Tab</b> Inventory</div>
                   <div><b>Esc</b> Pause</div>
                 </div>
                 <div class="controls-note">Controls are fixed &amp; consistent — no auto-remapping. Sensitivity persists between sessions.</div>
@@ -196,6 +197,21 @@
             <p id="death-stats"></p>
             <div id="death-report"></div>
             <button id="btn-retry" class="btn-primary">RE-ENTER GAUNTLET</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="inventory" class="hidden">
+        <div class="inv-panel">
+          <div class="inv-head">
+            <span>INVENTORY // GEAR GRID</span>
+            <span class="inv-hint-top">I / TAB • 1-4 switch • F pickups</span>
+          </div>
+          <div id="inv-grid" class="inv-grid"></div>
+          <div id="inv-detail" class="inv-detail">No weapon</div>
+          <div class="inv-foot">
+            <span>SLOT 1-2: M4 / G19 • SLOT 3-4: pickups (M1014)</span>
+            <span class="inv-close-hint">[I] CLOSE</span>
           </div>
         </div>
       </div>

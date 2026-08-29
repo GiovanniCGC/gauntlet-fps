@@ -96,9 +96,33 @@ export class Input {
   exitPointerLock() { if (document.pointerLockElement) document.exitPointerLock().catch(()=>{}); }
 
   _onKeyDown(e) {
+    // Inventory toggle - always allow (even paused, but not dead)
+    if (e.code === 'KeyI' || e.code === 'Tab') {
+      if (this.game.state === 'playing' || this.game.state === 'paused') {
+        e.preventDefault();
+        this.game.weapons?.inventory?.toggle();
+        // if inventory opened, pause pointer lock sensitivity? keep game but unlock cursor
+        if (this.game.weapons.inventory.isOpen) this.exitPointerLock();
+        else if (this.game.state === 'playing') this.requestPointerLock();
+        return;
+      }
+    }
+    // Weapon slots 1-4
+    if (e.code === 'Digit3') {
+      e.preventDefault();
+      if (this.game.state === 'playing') this.game.weapons?.switchTo(2);
+      return;
+    }
+    if (e.code === 'Digit4') {
+      e.preventDefault();
+      if (this.game.state === 'playing') this.game.weapons?.switchTo(3);
+      return;
+    }
     // Always allow pause even when paused/dead
     if (e.code === CONFIG.input.pause) {
       e.preventDefault();
+      // close inventory first
+      if (this.game.weapons?.inventory?.isOpen) { this.game.weapons.inventory.close(); return; }
       if (this.game.state !== 'dead') this.game.togglePause();
       return;
     }
@@ -108,11 +132,11 @@ export class Input {
       return;
     }
     // Prevent browser shortcuts that cause control loss
-    if (['Tab','F5','F12'].includes(e.code)) return;
+    if (['F5','F12'].includes(e.code)) return;
     if (e.repeat) {
       // For hold keys (movement/sprint/crouch/lean) we don't need repeat handling
       // For actions (reload/interact/weapon switch) block repeat to avoid spam
-      if ([CONFIG.input.reload, CONFIG.input.interact, CONFIG.input.weap1, CONFIG.input.weap2].includes(e.code)) return;
+      if ([CONFIG.input.reload, CONFIG.input.interact, CONFIG.input.weap1, CONFIG.input.weap2, 'Digit3','Digit4'].includes(e.code)) return;
     }
     this.keys.add(e.code);
 
